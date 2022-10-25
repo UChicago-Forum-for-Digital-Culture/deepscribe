@@ -1,14 +1,15 @@
 # take a raw JSON export from OCHRE
 # and use the dimensions of the hotspots to remove backdrop from the images.
 
-from argparse import ArgumentParser
-from typing import Dict
-from copy import deepcopy
 import json
-from tqdm import tqdm
 import os
+from argparse import ArgumentParser
+from copy import deepcopy
+from typing import Dict
 
 import cv2
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 
 def parse_args():
@@ -80,10 +81,12 @@ def main():
 
     os.mkdir(args.cropped_imgs)
 
-    cropped_entries = [
-        crop_image(entry, args.raw_imgs, args.cropped_imgs, error_on_missing=True)
+    cropped_entries = Parallel(n_jobs=10)(
+        delayed(crop_image)(
+            entry, args.raw_imgs, args.cropped_imgs, error_on_missing=True
+        )
         for entry in tqdm(raw_dset)
-    ]
+    )
 
     with open(args.cropped_json, "w") as outf:
         json.dump(cropped_entries, outf)
