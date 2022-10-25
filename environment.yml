@@ -1,0 +1,17 @@
+name: deepscribe2
+channels:
+ - pytorch
+ - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cudatoolkit=11.6
+  - pytorch-lightning
+  - lightning-bolts
+  - torchmetrics
+  - nb_conda
+  - matplotlib
+  - Pillow
+  - opencv
