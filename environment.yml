@@ -1,18 +1,22 @@
 name: deepscribe2
 channels:
  - pytorch
+ - nvidia
  - conda-forge
 dependencies:
   - python=3.10
   - pytorch
   - torchvision
+  - pytorch-cuda=11.6
   - torchaudio
-  - cudatoolkit=11.6
+  - black
   - pytorch-lightning
-  - lightning-bolts
   - torchmetrics
   - nb_conda
+  - numpy
   - matplotlib
   - Pillow
+  - tqdm
   - opencv
-  - scikit-learn
+  - ipykernel
+  - ipywidgets

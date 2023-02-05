@@ -1,34 +1,41 @@
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from torchvision.datasets import VisionDataset
 from PIL import Image
+from typing import Optional, Callable
 import torch
 import json
 
 
-class DeepScribeDataset(Dataset):
-    def __init__(self, data_files, img_folder, box_only=False):
-        super().__init__()
-        # detectron2-formatted dataset
-        if isinstance(data_files, str):
-            data_files = [data_files]
+class CuneiformLocalizationDataset(VisionDataset):
+    """
+    Object detection dataset for labeled cuneiform tablets.
 
-        self.data = []
-        for dfile in data_files:
-            with open(dfile, "r") as inf:
-                self.data.extend(json.load(inf))
+    """
 
-        self.img_folder = img_folder
+    def __init__(
+        self,
+        labels: str,
+        root: str,
+        localization_only=False,
+        transforms: Optional[Callable] = None,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+    ) -> None:
+        super().__init__(root, transforms, transform, target_transform)
 
-        self.transforms = transforms.Compose([transforms.PILToTensor()])
-        self.box_only = box_only
+        self.localization_only = localization_only
 
-    def __len__(self):
+        # open labels file
+        with open(labels) as inf:
+            self.data = json.load(inf)
+
+    def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, index):
         entry = self.data[index]
-        img = Image.open(f"{self.img_folder}/{entry['file_name']}")
-
+        img = Image.open(f"{self.root}/{entry['file_name']}")
         bboxes, labels = zip(
             *[
                 (
@@ -38,16 +45,20 @@ class DeepScribeDataset(Dataset):
                 for annotation in entry["annotations"]
             ]
         )
-        # Actual normalization is handled by the retinanet module
-        return (self.transforms(img) / 255.0), {
-            "boxes": torch.tensor(bboxes),
-            "labels": torch.tensor(labels, dtype=torch.int64),
-        }
+
+        boxes = torch.tensor(bboxes)
+        labels = torch.tensor(labels, dtype=torch.int64)
+        # apply transforms if present
+        if self.transforms:
+            img, boxes, labels = self.transforms(img, boxes, labels)
+
+        targets = {"boxes": boxes, "labels": labels}
+
+        return img, targets
 
 
 def collate_retinanet(batch_input):
-
-    images, labels = zip(
+    images, targets = zip(
         *[
             (
                 img,
@@ -56,4 +67,4 @@ def collate_retinanet(batch_input):
             for img, lab in batch_input
         ]
     )
-    return list(images), list(labels)
+    return list(images), list(targets)

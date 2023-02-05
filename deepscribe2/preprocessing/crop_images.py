@@ -5,10 +5,10 @@ import json
 import os
 from argparse import ArgumentParser
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, Tuple
 
 import cv2
-from joblib import Parallel, delayed
+import numpy as np
 from tqdm import tqdm
 
 
@@ -20,24 +20,32 @@ def parse_args():
         "--cropped_imgs",
         help="Output for cropped images. If this directory doesn't exist, it will be created.",
     )
+    parser.add_argument(
+        "--margin", help="margin in px to add around each boundary.", default=50
+    )
     parser.add_argument("--cropped_json", help="output for cropped JSON.")
 
     return parser.parse_args()
 
 
 def crop_image(
-    img_data: Dict, imgfolder: str, outfolder: str, error_on_missing: bool = True
-) -> Dict:
+    img_data: Dict,
+    imgfolder: str,
+    error_on_missing: bool = True,
+    margin: int = 50,
+) -> Tuple[np.array, Dict]:
     new_data = deepcopy(img_data)
 
     points = [anno["bbox"] for anno in img_data["annotations"]]
 
-    # dealing with negative-valued coordinates
-    min_x0 = int(max(0, min([pt[0] for pt in points])))
-    max_x1 = int(max([pt[2] for pt in points]))
+    old_height, old_width = img_data["height"], img_data["width"]
 
-    min_y0 = int(max(0, min([pt[1] for pt in points])))
-    max_y1 = int(max([pt[3] for pt in points]))
+    # dealing with negative-valued coordinates
+    min_x0 = int(max(0, min([pt[0] for pt in points]) - margin))
+    max_x1 = int(max(old_width, max([pt[2] for pt in points]) + margin))
+
+    min_y0 = int(max(0, min([pt[1] for pt in points])) - margin)
+    max_y1 = int(max(old_height, max([pt[3] for pt in points]) + margin))
 
     img = cv2.imread(f"{imgfolder}/{img_data['file_name']}")
 
@@ -66,9 +74,8 @@ def crop_image(
             old_bbox[3] - min_y0,
         ]
 
-    cv2.imwrite(f"{outfolder}/{new_data['file_name']}", cropped)
 
-    return new_data
+    return new_data, cropped
 
 
 def main():
@@ -81,12 +88,10 @@ def main():
 
     os.mkdir(args.cropped_imgs)
 
-    cropped_entries = Parallel(n_jobs=10)(
-        delayed(crop_image)(
-            entry, args.raw_imgs, args.cropped_imgs, error_on_missing=True
-        )
+    cropped_entries = [
+        crop_image(entry, args.raw_imgs, args.cropped_imgs, error_on_missing=True)
         for entry in tqdm(raw_dset)
-    )
+    ]
 
     with open(args.cropped_json, "w") as outf:
         json.dump(cropped_entries, outf)
