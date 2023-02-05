@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torchvision
 from torch import nn, Tensor
+from PIL import Image
+import numpy as np
 from torchvision import ops
 from torchvision.transforms import functional as F, InterpolationMode, transforms as T
 
@@ -661,3 +663,14 @@ class SimpleCopyPaste(torch.nn.Module):
     def __repr__(self) -> str:
         s = f"{self.__class__.__name__}(blending={self.blending}, resize_interpolation={self.resize_interpolation})"
         return s
+
+
+# square padding transform!
+class SquarePad:
+    def __call__(self, image: Image):
+        w, h = image.size
+        max_wh = np.max([w, h])
+        hp = int((max_wh - w) / 2)
+        vp = int((max_wh - h) / 2)
+        padding = (hp, vp, hp, vp)
+        return F.pad(image, padding, 0, "constant")
