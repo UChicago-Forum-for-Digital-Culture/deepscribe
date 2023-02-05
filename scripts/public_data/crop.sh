@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA_DIR=/local/ecw/DeepScribe_Data_2023-02-04-selected
+DATA_DIR=/local/ecw/DeepScribe_Data_2023-02-04-selected/public
 
 python deepscribe2/preprocessing/crop_images.py --json $DATA_DIR/imagesWithHotspots_public.json \
                                                 --raw_imgs $DATA_DIR/images_public \

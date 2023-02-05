@@ -33,6 +33,7 @@ loader = DataLoader(
         train_file, imgs_base, transforms=xforms, localization_only=True
     ),
     batch_size=5,
+    shuffle=True,
     collate_fn=collate_retinanet,
     num_workers=12,
 )
