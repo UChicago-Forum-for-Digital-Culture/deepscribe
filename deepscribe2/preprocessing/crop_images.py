@@ -96,6 +96,7 @@ def main():
             entry, args.raw_imgs, margin=args.margin
         )
         outpath = f"{args.cropped_imgs}/{new_entry['file_name']}"
+        cropped_entries.append(new_entry)
         write_jpeg(cropped_image, outpath)
 
     with open(args.cropped_json, "w") as outf:

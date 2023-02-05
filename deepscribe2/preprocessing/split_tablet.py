@@ -28,7 +28,7 @@ def main():
         dset = json.load(inf)
 
     # split data by text into disjoint folds
-    all_texts = [entry["annotations"][0]["text"] for entry in dset]
+    all_texts = [entry["text_id"] for entry in dset]
 
     unique_texts = np.unique(all_texts)
 
@@ -45,10 +45,7 @@ def main():
     folds = []
 
     for fold_texts in np.split(unique_texts, split_inds):
-        fold_data = [
-            entry for entry in dset if entry["annotations"][0]["text"] in fold_texts
-        ]
-        print(len(fold_data))
+        fold_data = [entry for entry in dset if entry["text_id"] in fold_texts]
         folds.append(fold_data)
 
     if args.fold_suffixes and not len(args.fold_suffixes) == len(args.splits):
