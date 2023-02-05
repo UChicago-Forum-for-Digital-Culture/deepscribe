@@ -7,9 +7,11 @@ from argparse import ArgumentParser
 from copy import deepcopy
 from typing import Dict, Tuple
 
-import cv2
-import numpy as np
+from torch import Tensor
+import torch
+from torchvision.io import read_image, write_jpeg
 from tqdm import tqdm
+from deepscribe2.utils import get_boxes
 
 
 def parse_args():
@@ -28,53 +30,51 @@ def parse_args():
     return parser.parse_args()
 
 
-def crop_image(
+def crop_to_box_boundaries(
     img_data: Dict,
     imgfolder: str,
-    error_on_missing: bool = True,
     margin: int = 50,
-) -> Tuple[np.array, Dict]:
-    new_data = deepcopy(img_data)
-
-    points = [anno["bbox"] for anno in img_data["annotations"]]
-
+) -> Tuple[torch.Tensor, Dict]:
+    boxes = get_boxes(img_data)
+    img = read_image(f"{imgfolder}/{img_data['file_name']}")
     old_height, old_width = img_data["height"], img_data["width"]
+    assert (old_height, old_width) == (img.shape[1], img.shape[2])
 
     # dealing with negative-valued coordinates
-    min_x0 = int(max(0, min([pt[0] for pt in points]) - margin))
-    max_x1 = int(max(old_width, max([pt[2] for pt in points]) + margin))
+    min_x0, min_y0 = int(max(0, boxes[:, 0].min() - margin)), int(
+        max(0, boxes[:, 1].min() - margin)
+    )
+    max_x1, max_y1 = int(min(old_width, boxes[:, 2].max()) + margin), int(
+        min(old_height, boxes[:, 3].max() + margin)
+    )
 
-    min_y0 = int(max(0, min([pt[1] for pt in points])) - margin)
-    max_y1 = int(max(old_height, max([pt[3] for pt in points]) + margin))
-
-    img = cv2.imread(f"{imgfolder}/{img_data['file_name']}")
-
-    if img is None:
-        print(
-            img_data["file_name"]
-            + " does not appear to exist or is not properly formatted."
-        )
-        if not error_on_missing:
-            return None
-        else:
-            raise RuntimeError()
-
-    cropped = img[min_y0:max_y1, min_x0:max_x1, :]
+    # crop image!
+    cropped = img[:, min_y0:max_y1, min_x0:max_x1]
 
     # adjust points - new origin is min_x0, min_y0
-    new_data["height"] = cropped.shape[0]
-    new_data["width"] = cropped.shape[1]
+    new_data = deepcopy(img_data)
 
-    for anno in new_data["annotations"]:
-        old_bbox = anno["bbox"]
-        anno["bbox"] = [
-            max(0, old_bbox[0]) - min_x0,
-            old_bbox[1] - min_y0,
-            old_bbox[2] - min_x0,
-            old_bbox[3] - min_y0,
-        ]
+    new_data["height"], new_data["width"] = cropped.shape[1], cropped.shape[2]
 
+    # translate all points
+    transform_matrix = torch.eye(3)
+    transform_matrix[0, 2] = -min_x0
+    transform_matrix[1, 2] = -min_y0
+    # add projective coord
+    coords0 = torch.ones((boxes.shape[0], 3))
+    coords0[:, :2] = boxes[:, :2]
+    coords1 = torch.ones((boxes.shape[0], 3))
+    coords1[:, :2] = boxes[:, 2:]
+    # remove projective coord
+    transformed0 = (
+        (transform_matrix @ coords0.transpose(0, 1)).to(int).transpose(0, 1)[:, :2]
+    )
+    transformed1 = (
+        (transform_matrix @ coords1.transpose(0, 1)).to(int).transpose(0, 1)[:, :2]
+    )
 
+    for i, anno in enumerate(new_data["annotations"]):
+        anno["bbox"] = transformed0[i, :].tolist() + transformed1[i, :].tolist()
     return new_data, cropped
 
 
@@ -86,12 +86,17 @@ def main():
 
     print(f"{len(raw_dset)} entries in the dataset loaded from {args.json}.")
 
-    os.mkdir(args.cropped_imgs)
+    if not os.path.isdir(args.cropped_imgs):
+        os.mkdir(args.cropped_imgs)
 
-    cropped_entries = [
-        crop_image(entry, args.raw_imgs, args.cropped_imgs, error_on_missing=True)
-        for entry in tqdm(raw_dset)
-    ]
+    cropped_entries = []
+
+    for entry in tqdm(raw_dset):
+        new_entry, cropped_image = crop_to_box_boundaries(
+            entry, args.raw_imgs, margin=args.margin
+        )
+        outpath = f"{args.cropped_imgs}/{new_entry['file_name']}"
+        write_jpeg(cropped_image, outpath)
 
     with open(args.cropped_json, "w") as outf:
         json.dump(cropped_entries, outf)
