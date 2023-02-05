@@ -1,31 +1,50 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
+
 from deepscribe2.datasets.dataset import CuneiformLocalizationDataset, collate_retinanet
 from deepscribe2.models.detection import RetinaNet
+from deepscribe2 import transforms as T
 
-imgs_base = "/local/ecw/DeepScribe_Data_2023-02-04-selected/images"
-
-fold0_file = "/local/ecw/data_nov_2021_fixednumerals/folds/fold0.json"
-fold1_file = "/local/ecw/data_nov_2021_fixednumerals/folds/fold1.json"
+DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 
 
-# TODO: DATA AUG!!
+imgs_base = f"{DATA_BASE}/cropped_images"
 
-model = RetinaNet(num_classes=2)
+train_file = f"{DATA_BASE}/data_train.json"
+val_file = f"{DATA_BASE}/data_val.json"
+
+
+xforms = T.Compose(
+    [
+        T.RandomHorizontalFlip(),
+        T.RandomShortestSize(
+            [500, 640, 672, 704, 736, 768, 800], 1333
+        ),  # taken directly from detectron2 config.
+        # T.RandomIoUCrop(),
+        # T.RandomZoomOut(),
+        # T.RandomPhotometricDistort(),
+    ]
+)
+
+model = RetinaNet(num_classes=1)
 
 loader = DataLoader(
-    CuneiformLocalizationDataset(fold0_file, imgs_base, box_only=True),
-    batch_size=2,
+    CuneiformLocalizationDataset(
+        train_file, imgs_base, transforms=xforms, localization_only=True
+    ),
+    batch_size=5,
     collate_fn=collate_retinanet,
     num_workers=12,
 )
 val_loader = DataLoader(
-    CuneiformLocalizationDataset(fold1_file, imgs_base, box_only=True),
-    batch_size=2,
+    CuneiformLocalizationDataset(val_file, imgs_base, localization_only=True),
+    batch_size=5,
     collate_fn=collate_retinanet,
     num_workers=12,
 )
-trainer = pl.Trainer(
-    accelerator="gpu", devices=1, logger=pl.loggers.CSVLogger("logs"), max_epochs=100
-)
+
+logger = pl.loggers.WandbLogger(project="deepscribe-torchvision")
+# logger = pl.loggers.CSVLogger("logs")
+
+trainer = pl.Trainer(accelerator="gpu", devices=1, logger=logger, max_epochs=100)
 trainer.fit(model, train_dataloaders=loader, val_dataloaders=val_loader)

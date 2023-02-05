@@ -11,7 +11,7 @@ from torchvision.models.detection.retinanet import RetinaNetHead, retinanet_resn
 class RetinaNet(LightningModule):
     def __init__(
         self,
-        learning_rate: float = 0.0001,
+        learning_rate: float = 1e-4,
         num_classes: int = 1,
         backbone: Optional[str] = None,
         **kwargs: Any
@@ -48,7 +48,6 @@ class RetinaNet(LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-
         images, targets = batch
         targets = [{k: v for k, v in t.items()} for t in targets]
 

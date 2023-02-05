@@ -6,9 +6,8 @@ channels:
 dependencies:
   - python=3.10
   - pytorch
-  - torchvision
   - pytorch-cuda=11.6
-  - torchaudio
+  - torchvision
   - black
   - pytorch-lightning
   - torchmetrics
@@ -17,6 +16,5 @@ dependencies:
   - matplotlib
   - Pillow
   - tqdm
-  - opencv
   - ipykernel
   - ipywidgets

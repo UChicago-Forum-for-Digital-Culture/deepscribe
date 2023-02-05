@@ -1,7 +1,5 @@
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 from torchvision.datasets import VisionDataset
-from PIL import Image
+from torchvision.io import read_image
 from typing import Optional, Callable
 import torch
 import json
@@ -35,24 +33,27 @@ class CuneiformLocalizationDataset(VisionDataset):
 
     def __getitem__(self, index):
         entry = self.data[index]
-        img = Image.open(f"{self.root}/{entry['file_name']}")
+
+        # rescaling to between 0 and 1
+        img = read_image(f"{self.root}/{entry['file_name']}") / 255.0
+
         bboxes, labels = zip(
             *[
                 (
                     annotation["bbox"],
-                    annotation["category_id"] if not self.box_only else 0,
+                    annotation["category_id"] if not self.localization_only else 0,
                 )
                 for annotation in entry["annotations"]
             ]
         )
 
-        boxes = torch.tensor(bboxes)
-        labels = torch.tensor(labels, dtype=torch.int64)
+        targets = {
+            "boxes": torch.tensor(bboxes).long(),
+            "labels": torch.tensor(labels).long(),
+        }
         # apply transforms if present
         if self.transforms:
-            img, boxes, labels = self.transforms(img, boxes, labels)
-
-        targets = {"boxes": boxes, "labels": labels}
+            img, targets = self.transforms(img, targets)
 
         return img, targets
 
