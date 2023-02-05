@@ -12,6 +12,7 @@ dependencies:
   - pytorch-lightning
   - torchmetrics
   - nb_conda
+  - scikit-learn
   - numpy
   - matplotlib
   - Pillow
