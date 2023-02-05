@@ -6,6 +6,9 @@ __pycache__/
 
 wandb/*
 
+notebooks-testing/*
+deepscribe-torchvision
+
 .vscode
 
 logs/
