@@ -92,8 +92,10 @@ class ImageClassifier(LightningModule):
         self.val_per_class = per_class_metrics.clone(prefix="val_")
 
         # create confusion matrices
-        # self.confusion_val = ConfusionMatrix(num_classes)
-        # self.confusion_train = ConfusionMatrix(num_classes)
+        # self.confusion_val = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        # self.confusion_train = ConfusionMatrix(
+        #     task="multiclass", num_classes=num_classes
+        # )
 
     # tensor of [B, C, H, W]
     def forward(self, imgs: torch.Tensor) -> torch.Tensor:
@@ -112,7 +114,7 @@ class ImageClassifier(LightningModule):
         softmax_pred = F.softmax(pred, dim=1)
 
         # self.confusion_train(softmax_pred, targets)
-        self.train_per_class(softmax_pred, targets)
+        # self.train_per_class(softmax_pred, targets)
         self.train_metrics(softmax_pred, targets)
 
         self.log_dict(self.train_metrics, on_epoch=True)
@@ -131,10 +133,11 @@ class ImageClassifier(LightningModule):
         softmax_pred = F.softmax(pred, dim=1)
 
         self.val_metrics(softmax_pred, targets)
-        self.val_per_class(softmax_pred, targets)
+        # self.val_per_class(softmax_pred, targets)
         # self.confusion_val(softmax_pred, targets)
 
         self.log_dict(self.val_metrics, on_epoch=True)
+        # self.log_dict(self.val_per_class, on_epoch=True)
 
     # def on_validation_epoch_end(self) -> None:
     #     output_dir = self.logger.log_dir + "/per_class/val/"

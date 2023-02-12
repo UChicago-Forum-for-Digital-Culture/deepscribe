@@ -32,6 +32,8 @@ class RetinaNet(LightningModule):
         )
         self.map = MeanAveragePrecision()
 
+        self.save_hyperparameters()
+
     def validation_step(self, batch, batch_idx):
         images, targets = batch
         # fasterrcnn takes only images for eval() mode

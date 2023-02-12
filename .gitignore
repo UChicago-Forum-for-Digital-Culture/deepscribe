@@ -7,10 +7,11 @@ __pycache__/
 wandb/*
 
 notebooks-testing/*
-deepscribe-torchvision
+deepscribe-torchvision*
 
 .vscode
 
+artifacts/*
 logs/
 
 # C extensions
