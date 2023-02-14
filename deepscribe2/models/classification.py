@@ -26,7 +26,7 @@ class ImageClassifier(LightningModule):
     def __init__(
         self,
         num_classes: int,
-        architecture: str = "resnet18",
+        architecture: str = "resnet50",
         use_pretrained: bool = False,
         learning_rate: float = 0.001,
         # focal_loss=False,

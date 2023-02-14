@@ -1,32 +1,58 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from torchvision.datasets import ImageFolder
 from torchvision import transforms as T
 
 from deepscribe2.models.classification import ImageClassifier
+from deepscribe2.transforms import SquarePad
+from deepscribe2.datasets.dataset_folder import HotspotDatasetFolder
+from deepscribe2.datasets.direct_dataset import DirectHotspotDataset
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
+N_CLASSES = 141  # TODO: pull this from folder structure
 
-
-base_transforms = T.Compose([T.ToTensor(), T.Resize((100, 100))])
+base_transforms = T.Compose([SquarePad(), T.ToTensor(), T.Resize((50, 50))])
 
 train_xforms = T.Compose(
-    [base_transforms, T.RandomPerspective(), T.ColorJitter(brightness=0.5, hue=0.3)]
+    [
+        base_transforms,
+        T.RandomAffine(0, translate=(0.2, 0.2)),
+        T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+        T.RandomPerspective(),
+    ]
 )
 
-model = ImageClassifier(141)
+model = ImageClassifier(N_CLASSES)
+
+
+imgs_base = f"{DATA_BASE}/cropped_images"
+
+train_file = f"{DATA_BASE}/data_train.json"
+val_file = f"{DATA_BASE}/data_val.json"
+
+
+train_dset = HotspotDatasetFolder(
+    DATA_BASE + "/all_hotspots/hotspots_train", N_CLASSES, transform=train_xforms
+)
+
+# train_dset = DirectHotspotDataset(train_file, imgs_base, train_xforms)
+
+val_dset = HotspotDatasetFolder(
+    DATA_BASE + "/all_hotspots/hotspots_val", N_CLASSES, transform=base_transforms
+)
+
+# val_dset = DirectHotspotDataset(val_file, imgs_base, base_transforms)
 
 loader = DataLoader(
-    ImageFolder(DATA_BASE + "/all_hotspots/hotspots_train", transform=train_xforms),
-    batch_size=1024,
+    train_dset,
+    batch_size=512,
     shuffle=True,
     num_workers=12,
 )
 
 val_loader = DataLoader(
-    ImageFolder(DATA_BASE + "/all_hotspots/hotspots_val", transform=base_transforms),
-    batch_size=1024,
+    val_dset,
+    batch_size=512,
     num_workers=12,
 )
 
