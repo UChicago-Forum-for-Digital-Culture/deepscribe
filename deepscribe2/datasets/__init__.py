@@ -1,1 +1,1 @@
-from .datamodules import PFADetectionDataModule
+from .datamodules import PFADetectionDataModule, PFAClassificationDataModule

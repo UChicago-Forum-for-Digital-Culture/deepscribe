@@ -22,7 +22,6 @@ xforms = T.Compose(
     ]
 )
 
-
 pfa_data_module = PFADetectionDataModule(
     DATA_BASE,
     autocrop=True,
@@ -30,25 +29,6 @@ pfa_data_module = PFADetectionDataModule(
     train_xforms=xforms,
     localization_only=LOCALIZATION_ONLY,
 )
-
-
-# imgs_base = f"{DATA_BASE}/cropped_images"
-# categories = f"{DATA_BASE}/categories.txt"
-
-# train_file = f"{DATA_BASE}/data_train.json"
-
-# train_dataset = CuneiformLocalizationDataset(
-#     train_file,
-#     imgs_base,
-#     categories,
-#     transforms=xforms,
-#     localization_only=LOCALIZATION_ONLY,
-# )
-
-# val_file = f"{DATA_BASE}/data_val.json"
-# val_dataset = CuneiformLocalizationDataset(
-#     train_file, imgs_base, categories, localization_only=LOCALIZATION_ONLY
-# )
 
 model = RetinaNet(num_classes=pfa_data_module.num_labels)
 
@@ -59,21 +39,6 @@ model = RetinaNet(num_classes=pfa_data_module.num_labels)
 # artifact = run.use_artifact(f"ecw/{WANDB_PROJECT}/model-vjy1binx:v90", type="model")
 # artifact_dir = artifact.download()
 # model = RetinaNet.load_from_checkpoint(Path(artifact_dir) / "model.ckpt")
-
-
-# loader = DataLoader(
-#     train_dataset,
-#     batch_size=5,
-#     shuffle=True,
-#     collate_fn=collate_retinanet,
-#     num_workers=12,
-# )
-# val_loader = DataLoader(
-#     val_dataset,
-#     batch_size=5,
-#     collate_fn=collate_retinanet,
-#     num_workers=12,
-# )
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
 checkpoint_callback = pl.callbacks.ModelCheckpoint(

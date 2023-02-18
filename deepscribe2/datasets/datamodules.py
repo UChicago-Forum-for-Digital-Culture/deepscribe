@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
@@ -9,9 +9,14 @@ from torch.utils.data import DataLoader
 from torchvision.io import write_jpeg
 from tqdm import tqdm
 import pandas as pd
+from torchvision import transforms as T
+from deepscribe2.transforms import SquarePad
+
 
 from deepscribe2.preprocessing.crop_images import crop_to_box_boundaries
 from deepscribe2.preprocessing.split_tablet import split_by_tablet
+from deepscribe2.preprocessing.get_hotspots import split_entry
+from deepscribe2.datasets.dataset_folder import HotspotDatasetFolder
 from deepscribe2.utils import get_boxes
 from deepscribe2.datasets.dataset import CuneiformLocalizationDataset, collate_retinanet
 
@@ -215,5 +220,141 @@ class PFADetectionDataModule(pl.LightningDataModule):
             batch_size=5,
             shuffle=False,
             collate_fn=collate_retinanet,
+            num_workers=12,
+        )
+
+
+class PFAClassificationDataModule(pl.LightningDataModule):
+    """
+    DataModule for classification.
+
+    NOTE: this assumes that the data has already been split into folds.
+
+    """
+
+    def __init__(
+        self,
+        base_dir: str,
+        batch_size: int = 512,
+        hotspot_size: Tuple[int, int] = (50, 50),
+        train_xforms: Optional[Callable] = None,
+    ) -> None:
+        super().__init__()
+
+        self.save_hyperparameters()
+
+        self.base_transforms = T.Compose(
+            [SquarePad(), T.ToTensor(), T.Resize((50, 50))]
+        )
+        self.transforms = T.Compose([self.base_transforms] + train_xforms)
+
+        self._load_classes()
+
+    def _load_classes(self):
+        # load classes info
+        # pandas will interpret the sign "NA" as NaN
+        sign_data = pd.read_csv(
+            self.categories_file, na_filter=False, names=["sign", "category_id"]
+        )
+        self.class_labels = sign_data["sign"].tolist()
+        self.num_labels = len(sign_data)
+
+    @property
+    def categories_file(self):
+        return f"{self.hparams.base_dir}/{CATEGORIES_BASE_FILE}"
+
+    @property
+    def train_hotspots(self):
+        return f"{self.hparams.base_dir}/all_hotspots/hotspots_train"
+
+    @property
+    def test_hotspots(self):
+        return f"{self.hparams.base_dir}/all_hotspots/hotspots_test"
+
+    @property
+    def val_hotspots(self):
+        return f"{self.hparams.base_dir}/all_hotspots/hotspots_test"
+
+    def _handle_cutouts(self):
+        dirs_exist = (
+            os.path.isdir(self.train_hotspots),
+            os.path.isdir(self.test_hotspots),
+            os.path.isdir(self.val_hotspots),
+        )
+
+        if 0 < sum(dirs_exist) < 3:
+            raise RuntimeError(
+                "Some hotspot image directories are present, and some are absent. Probably the data folder structure is incorrect or something else broke."
+            )
+        elif all(dirs_exist):
+            print("Hotspots have already been made for this dataset. Skipping.")
+        else:
+            print("Generating cutouts from base data.")
+
+            print("Generating train hotspots.")
+            with open(f"{self.hparams.base_dir}/data_train_cropped.json", "r") as inf:
+                dataset = json.load(inf)
+            for entry in tqdm(dataset):
+                split_entry(
+                    entry,
+                    f"{self.hparams.base_dir}/{IMAGES_CROPPED_DIR}",
+                    self.train_hotspots,
+                )
+            print("Generating val hotspots.")
+            with open(f"{self.hparams.base_dir}/data_val_cropped.json", "r") as inf:
+                dataset = json.load(inf)
+            for entry in tqdm(dataset):
+                split_entry(
+                    entry,
+                    f"{self.hparams.base_dir}/{IMAGES_CROPPED_DIR}",
+                    self.val_hotspots,
+                )
+            print("Generating test hotspots.")
+            with open(f"{self.hparams.base_dir}/data_test_cropped.json", "r") as inf:
+                dataset = json.load(inf)
+            for entry in tqdm(dataset):
+                split_entry(
+                    entry,
+                    f"{self.hparams.base_dir}/{IMAGES_CROPPED_DIR}",
+                    self.test_hotspots,
+                )
+
+    def prepare_data(self) -> None:
+        self._handle_cutouts()
+
+    def setup(self, stage: str):
+        if stage == "fit":
+            self.train_dataset = HotspotDatasetFolder(
+                self.train_hotspots, self.num_labels, transform=self.transforms
+            )
+            self.val_dataset = HotspotDatasetFolder(
+                self.val_hotspots, self.num_labels, transform=self.transforms
+            )
+        if stage == "test":
+            self.test_dataset = HotspotDatasetFolder(
+                self.test_hotspots, self.num_labels, transform=self.transforms
+            )
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.hparams.batch_size,
+            shuffle=True,
+            num_workers=12,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.hparams.batch_size,
+            shuffle=False,
+            num_workers=12,
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.hparams.batch_size,
+            shuffle=False,
             num_workers=12,
         )
