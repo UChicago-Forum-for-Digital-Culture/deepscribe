@@ -5,17 +5,13 @@ from sklearn.linear_model import RANSACRegressor, Ridge
 import matplotlib.pyplot as plt
 
 
-def get_centroids(bboxes):
-    # convert bboxes to centroids
-    return np.array(
-        [((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2) for bbox in bboxes]
-    )
-
-
 def dist_to_line_2d(slope, intercept, point):
     return np.abs(-slope * point[0] + point[1] - intercept) / np.sqrt((slope**2 + 1))
 
 
+# TODO: this needs some work to really behave like a clusterer
+# although is that even what it is? Needs to group points into lines
+# AND sort the lines... maybe that's best done separately?
 class SequentialRANSAC(BaseEstimator, ClusterMixin):
     def __init__(
         self,

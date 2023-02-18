@@ -1,8 +1,10 @@
+import json
+from typing import Callable, Optional
+
+import pandas as pd
+import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_image
-from typing import Optional, Callable
-import torch
-import json
 
 
 class CuneiformLocalizationDataset(VisionDataset):
@@ -14,15 +16,25 @@ class CuneiformLocalizationDataset(VisionDataset):
     def __init__(
         self,
         labels: str,
-        root: str,
+        img_root: str,
+        classes_info: str,
         localization_only=False,
         transforms: Optional[Callable] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
     ) -> None:
-        super().__init__(root, transforms, transform, target_transform)
+        super().__init__(img_root, transforms, transform, target_transform)
 
         self.localization_only = localization_only
+
+        # load classes info
+        # pandas will interpret the sign "NA" as NaN
+        self.sign_data = pd.read_csv(
+            classes_info, na_filter=False, names=["sign", "category_id"]
+        )
+
+        self.class_labels = self.sign_data["sign"].tolist()
+        self.num_labels = 1 if self.localization_only else len(self.sign_data)
 
         # open labels file
         with open(labels) as inf:

@@ -9,6 +9,7 @@ from deepscribe2.datasets.direct_dataset import DirectHotspotDataset
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
+MONITOR_ATTRIBUTE = "val_Accuracy_top5_micro"
 N_CLASSES = 141  # TODO: pull this from folder structure
 
 base_transforms = T.Compose([SquarePad(), T.ToTensor(), T.Resize((50, 50))])
@@ -24,24 +25,18 @@ train_xforms = T.Compose(
 
 model = ImageClassifier(N_CLASSES)
 
-
 imgs_base = f"{DATA_BASE}/cropped_images"
 
 train_file = f"{DATA_BASE}/data_train.json"
 val_file = f"{DATA_BASE}/data_val.json"
 
-
 train_dset = HotspotDatasetFolder(
     DATA_BASE + "/all_hotspots/hotspots_train", N_CLASSES, transform=train_xforms
 )
 
-# train_dset = DirectHotspotDataset(train_file, imgs_base, train_xforms)
-
 val_dset = HotspotDatasetFolder(
     DATA_BASE + "/all_hotspots/hotspots_val", N_CLASSES, transform=base_transforms
 )
-
-# val_dset = DirectHotspotDataset(val_file, imgs_base, base_transforms)
 
 loader = DataLoader(
     train_dset,
@@ -58,16 +53,17 @@ val_loader = DataLoader(
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT)
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    monitor="val_Accuracy_top5_macro", mode="max"
+    monitor=MONITOR_ATTRIBUTE, mode="max"
 )
-
-# logger = pl.loggers.CSVLogger("logs")
+earlystop_callback = pl.callbacks.EarlyStopping(
+    monitor=MONITOR_ATTRIBUTE, mode="max", patience=10
+)
 
 trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
     logger=logger,
-    max_epochs=100,
-    callbacks=[checkpoint_callback],
+    max_epochs=10,
+    callbacks=[checkpoint_callback, earlystop_callback],
 )
 trainer.fit(model, train_dataloaders=loader, val_dataloaders=val_loader)

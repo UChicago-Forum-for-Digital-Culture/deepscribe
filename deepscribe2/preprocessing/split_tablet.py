@@ -21,32 +21,38 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-
-    with open(args.json) as inf:
-        dset = json.load(inf)
-
+def split_by_tablet(dset, splits, tablet_id_key="text_id", seed=0):
     # split data by text into disjoint folds
-    all_texts = [entry["text_id"] for entry in dset]
+    all_texts = [entry[tablet_id_key] for entry in dset]
 
     unique_texts = np.unique(all_texts)
 
     print(f"{len(unique_texts)} unique texts in dataset")
-    np.random.shuffle(unique_texts)
+    np.random.default_rng(seed).shuffle(unique_texts)
 
-    splits = np.array(args.splits)
+    splits = np.array(splits)
 
     if not sum(splits) == 1:
-        raise ValueError(f"{args.splits} does not add up to 1.")
+        raise ValueError(f"{splits} does not add up to 1.")
 
     split_inds = (np.cumsum(splits[:-1]) * len(unique_texts)).astype(int)
 
     folds = []
 
     for fold_texts in np.split(unique_texts, split_inds):
-        fold_data = [entry for entry in dset if entry["text_id"] in fold_texts]
+        fold_data = [entry for entry in dset if entry[tablet_id_key] in fold_texts]
         folds.append(fold_data)
+
+    return folds
+
+
+def main():
+    args = parse_args()
+
+    with open(args.json) as inf:
+        dset = json.load(inf)
+
+    folds = split_by_tablet(dset, args.splits)
 
     if args.fold_suffixes and not len(args.fold_suffixes) == len(args.splits):
         raise ValueError(f"{args.fold_suffixes} does not match {args.split}")
