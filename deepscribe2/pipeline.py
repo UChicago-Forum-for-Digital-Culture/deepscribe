@@ -79,11 +79,13 @@ class DeepScribePipeline(nn.Module):
             pred["boxes"][:, 3] = torch.clamp(
                 pred["boxes"][:, 3], min=0, max=img.shape[1]
             )
+            num_preds = pred["boxes"].shape[0]
+            if num_preds == 0:
+                continue
 
             if self.classifier:
                 # print("Running inference with classifier...")
                 xformed_cutouts = []
-                num_preds = pred["boxes"].shape[0]
                 for i in range(num_preds):
                     x1, y1, x2, y2 = pred["boxes"][i, :].long().tolist()
                     cutout = img[:, y1:y2, x1:x2]

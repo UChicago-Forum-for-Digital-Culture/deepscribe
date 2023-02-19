@@ -33,22 +33,29 @@ pipeline = DeepScribePipeline(
 map_metric = MeanAveragePrecision()
 edit_dists = []
 
+failed = 0
+
 for imgs, targets in tqdm(pfa_datamodule.test_dataloader()):
     preds = pipeline(imgs)
 
     map_metric.update(preds, targets)
 
     for pred, targ in zip(preds, targets):
-        edit_dists.append(
-            editdistance.eval(
-                pred["labels"].flatten()[pred["ordering"]].tolist(),
-                targ["labels"].tolist(),
+        if "ordering" in pred:
+            edit_dists.append(
+                editdistance.eval(
+                    pred["labels"].flatten()[pred["ordering"]].tolist(),
+                    targ["labels"].tolist(),
+                )
             )
-        )
-    # compute edit dist
+        else:
+            failed += 1
+        # compute edit dist
 
 print(
     f"edit dists: {np.median(edit_dists)} / {np.mean(edit_dists)} ({np.std(edit_dists)})"
 )
 
 print(f"map: {map_metric.compute()}")
+
+print(f"failed: {failed}")

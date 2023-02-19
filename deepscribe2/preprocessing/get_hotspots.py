@@ -30,7 +30,7 @@ def split_entry(entry, img_base, output_base):
         hotspot = img[:, y0:y1, x0:x1]
         # if the class subdir doesn't exist, create it
         subdir = f"{output_base}/category_{annotation['category_id']}"
-        os.makedirs(subdir, exist_ok=False)
+        os.makedirs(subdir, exist_ok=True)
         write_jpeg(
             hotspot, f"{subdir}/{annotation['category_id']}_{i}_{entry['file_name']}"
         )
