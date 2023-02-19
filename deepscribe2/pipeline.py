@@ -23,7 +23,7 @@ class DeepScribePipeline(nn.Module):
         detection_ckpt: str,
         sign_data: str,
         classifier_ckpt: str = None,
-        score_thresh: float = 0.5,  # apply a score thresh on top of the existing score threshold.
+        score_thresh: float = 0.3,  # apply a score thresh on top of the existing score threshold.
     ) -> None:
         super().__init__()
 
@@ -88,12 +88,12 @@ class DeepScribePipeline(nn.Module):
                     x1, y1, x2, y2 = pred["boxes"][i, :].long().tolist()
                     cutout = img[:, y1:y2, x1:x2]
                     xformed_cutouts.append(transforms(cutout))
-                # run inference.
-                cutouts_tensor = torch.stack(xformed_cutouts)
-                cutout_preds = self.classifier(cutouts_tensor)
-                # overwrite labels with predictions
-                pred["labels"] = cutout_preds.topk(k=1, axis=1).indices
-                pred["classifier_top5"] = cutout_preds.topk(k=5, axis=1).indices
+                    # run inference.
+                    cutouts_tensor = torch.stack(xformed_cutouts)
+                    cutout_preds = self.classifier(cutouts_tensor)
+                    # overwrite labels with predictions
+                    pred["labels"] = cutout_preds.topk(k=1, axis=1).indices
+                    pred["classifier_top5"] = cutout_preds.topk(k=5, axis=1).indices
 
             # get sequence/ordering
             centroids = get_centroids(pred["boxes"]).numpy()

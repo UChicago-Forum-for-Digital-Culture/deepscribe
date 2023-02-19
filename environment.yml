@@ -24,3 +24,4 @@ dependencies:
   - pip:
     - timm
     - editdistance
+    - wandb
