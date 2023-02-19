@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import wandb
 
 from deepscribe2.datasets import PFADetectionDataModule
-from deepscribe2.models.detection import RetinaNet
+from deepscribe2.models import RetinaNet
 from deepscribe2 import transforms as T
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
