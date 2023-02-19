@@ -4,7 +4,6 @@ from typing import Callable, Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
-from torch import Tensor
 from torch.utils.data import DataLoader
 from torchvision.io import write_jpeg
 from tqdm import tqdm
@@ -17,8 +16,11 @@ from deepscribe2.preprocessing.crop_images import crop_to_box_boundaries
 from deepscribe2.preprocessing.split_tablet import split_by_tablet
 from deepscribe2.preprocessing.get_hotspots import split_entry
 from deepscribe2.datasets.dataset_folder import HotspotDatasetFolder
-from deepscribe2.utils import get_boxes
-from deepscribe2.datasets.dataset import CuneiformLocalizationDataset, collate_retinanet
+from deepscribe2.datasets.dataset import (
+    CuneiformLocalizationDataset,
+    collate_retinanet,
+)
+from deepscribe2.models.detr.util.misc import collate_fn as collate_detr
 
 generator = torch.Generator().manual_seed(42)
 
@@ -39,6 +41,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
         splits=(0.8, 0.1, 0.1),  # train, val, test
         train_xforms: Optional[Callable] = None,
         localization_only: bool = False,
+        collate: str = "retinanet",
     ) -> None:
         super().__init__()
 
@@ -74,6 +77,12 @@ class PFADetectionDataModule(pl.LightningDataModule):
     def image_dir(self):
         suffix = IMAGES_CROPPED_DIR if self.hparams.autocrop else IMAGES_BASE_DIR
         return f"{self.hparams.base_dir}/{suffix}"
+
+    @property
+    def collate_fn(self):
+        return (
+            collate_retinanet if self.hparams.collate == "retinanet" else collate_detr
+        )
 
     @property
     def hotspot_file(self):
@@ -201,7 +210,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
             self.train_dataset,
             batch_size=5,
             shuffle=True,
-            collate_fn=collate_retinanet,
+            collate_fn=self.hparams.collate_fn,
             num_workers=12,
         )
 

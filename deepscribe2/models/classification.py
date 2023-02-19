@@ -109,7 +109,7 @@ class ImageClassifier(LightningModule):
         pred = self(images)
 
         loss = self.loss(pred, targets.long())
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True)
 
         softmax_pred = F.softmax(pred, dim=1)
 
@@ -117,7 +117,7 @@ class ImageClassifier(LightningModule):
         # self.train_per_class(softmax_pred, targets)
         self.train_metrics(softmax_pred, targets)
 
-        self.log_dict(self.train_metrics, on_epoch=True)
+        self.log_dict(self.train_metrics)
 
         # self.log_dict(self.train_per_class, on_epoch=True)
 
@@ -128,7 +128,7 @@ class ImageClassifier(LightningModule):
 
         pred = self(images)
         loss = self.loss(pred, targets.long())
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True)
 
         softmax_pred = F.softmax(pred, dim=1)
 

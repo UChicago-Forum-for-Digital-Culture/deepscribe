@@ -11,7 +11,7 @@ from deepscribe2.datasets.direct_dataset import DirectHotspotDataset
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
-MONITOR_ATTRIBUTE = "val_Accuracy_top5_micro"
+MONITOR_ATTRIBUTE = "val_loss"
 
 train_xforms = [
     T.RandomAffine(0, translate=(0.2, 0.2)),
@@ -25,19 +25,19 @@ pfa_datamodule = PFAClassificationDataModule(
 
 model = ImageClassifier(pfa_datamodule.num_labels)
 
-logger = pl.loggers.WandbLogger(project=WANDB_PROJECT)
+logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    monitor=MONITOR_ATTRIBUTE, mode="max"
+    monitor=MONITOR_ATTRIBUTE, mode="min"
 )
 earlystop_callback = pl.callbacks.EarlyStopping(
-    monitor=MONITOR_ATTRIBUTE, mode="max", patience=10
+    monitor=MONITOR_ATTRIBUTE, mode="min", patience=10
 )
 
 trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
     logger=logger,
-    max_epochs=10,
+    max_epochs=100,
     callbacks=[checkpoint_callback, earlystop_callback],
 )
 trainer.fit(model, datamodule=pfa_datamodule)
