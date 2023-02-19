@@ -41,7 +41,8 @@ class PFADetectionDataModule(pl.LightningDataModule):
         splits=(0.8, 0.1, 0.1),  # train, val, test
         train_xforms: Optional[Callable] = None,
         localization_only: bool = False,
-        collate: str = "retinanet",
+        collate_fn: str = "retinanet",
+        n_workers: int = 12,
     ) -> None:
         super().__init__()
 
@@ -81,7 +82,9 @@ class PFADetectionDataModule(pl.LightningDataModule):
     @property
     def collate_fn(self):
         return (
-            collate_retinanet if self.hparams.collate == "retinanet" else collate_detr
+            collate_retinanet
+            if self.hparams.collate_fn == "retinanet"
+            else collate_detr
         )
 
     @property
@@ -138,7 +141,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                     write_jpeg(cropped_image, outpath)
 
                 with open(
-                    {self.hparams.base_dir} / {HOTSPOTS_CROPPED_BASE_FILE}, "w"
+                    f"{self.hparams.base_dir}/{HOTSPOTS_CROPPED_BASE_FILE}", "w"
                 ) as outf:
                     json.dump(cropped_entries, outf)
             else:
@@ -208,28 +211,28 @@ class PFADetectionDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
-            batch_size=5,
+            batch_size=self.hparams.batch_size,
             shuffle=True,
-            collate_fn=self.hparams.collate_fn,
-            num_workers=12,
+            collate_fn=self.collate_fn,
+            num_workers=self.hparams.n_workers,
         )
 
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
-            batch_size=5,
+            batch_size=self.hparams.batch_size,
             shuffle=False,
-            collate_fn=collate_retinanet,
-            num_workers=12,
+            collate_fn=self.collate_fn,
+            num_workers=self.hparams.n_workers,
         )
 
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
-            batch_size=5,
+            batch_size=self.hparams.batch_size,
             shuffle=False,
-            collate_fn=collate_retinanet,
-            num_workers=12,
+            collate_fn=self.collate_fn,
+            num_workers=self.hparams.n_workers,
         )
 
 
@@ -247,6 +250,7 @@ class PFAClassificationDataModule(pl.LightningDataModule):
         batch_size: int = 512,
         hotspot_size: Tuple[int, int] = (50, 50),
         train_xforms: Optional[Callable] = None,
+        n_workers: int = 12,
     ) -> None:
         super().__init__()
 
@@ -282,7 +286,7 @@ class PFAClassificationDataModule(pl.LightningDataModule):
 
     @property
     def val_hotspots(self):
-        return f"{self.hparams.base_dir}/all_hotspots/hotspots_test"
+        return f"{self.hparams.base_dir}/all_hotspots/hotspots_val"
 
     def _handle_cutouts(self):
         dirs_exist = (
@@ -349,7 +353,7 @@ class PFAClassificationDataModule(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.hparams.batch_size,
             shuffle=True,
-            num_workers=12,
+            num_workers=self.hparams.n_workers,
         )
 
     def val_dataloader(self):
@@ -357,7 +361,7 @@ class PFAClassificationDataModule(pl.LightningDataModule):
             self.val_dataset,
             batch_size=self.hparams.batch_size,
             shuffle=False,
-            num_workers=12,
+            num_workers=self.hparams.n_workers,
         )
 
     def test_dataloader(self):
@@ -365,5 +369,5 @@ class PFAClassificationDataModule(pl.LightningDataModule):
             self.test_dataset,
             batch_size=self.hparams.batch_size,
             shuffle=False,
-            num_workers=12,
+            num_workers=self.hparams.n_workers,
         )
