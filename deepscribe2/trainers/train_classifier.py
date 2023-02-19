@@ -30,7 +30,7 @@ checkpoint_callback = pl.callbacks.ModelCheckpoint(
     monitor=MONITOR_ATTRIBUTE, mode="min"
 )
 earlystop_callback = pl.callbacks.EarlyStopping(
-    monitor=MONITOR_ATTRIBUTE, mode="min", patience=10
+    monitor=MONITOR_ATTRIBUTE, mode="min", patience=20
 )
 
 trainer = pl.Trainer(

@@ -20,7 +20,7 @@ from deepscribe2.datasets.dataset import (
     CuneiformLocalizationDataset,
     collate_retinanet,
 )
-from deepscribe2.models.detr.util.misc import collate_fn as collate_detr
+from deepscribe2.models.detection.detr import collate_fn as collate_detr
 
 generator = torch.Generator().manual_seed(42)
 
@@ -71,7 +71,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
             self.categories_file, na_filter=False, names=["sign", "category_id"]
         )
         self.class_labels = sign_data["sign"].tolist()
-        self.num_labels = 1 if self.hparams.localization_only else len(self.sign_data)
+        self.num_labels = 1 if self.hparams.localization_only else len(sign_data)
 
     @property
     def image_dir(self):

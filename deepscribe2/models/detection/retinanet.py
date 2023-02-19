@@ -14,6 +14,8 @@ class RetinaNet(LightningModule):
         learning_rate: float = 1e-4,
         num_classes: int = 1,
         backbone: Optional[str] = None,
+        score_thresh: float = 0.3,  # from detectron configs
+        nms_thresh: float = 0.2,  # from detectron configs
         **kwargs: Any
     ):
         super().__init__()
@@ -22,7 +24,11 @@ class RetinaNet(LightningModule):
         self.backbone = backbone
 
         self.model = retinanet_resnet50_fpn(
-            trainable_backbone_layers=5, weights_backbone=None, **kwargs
+            trainable_backbone_layers=5,
+            weights_backbone=None,
+            score_thresh=score_thresh,
+            nms_thres=nms_thresh,
+            **kwargs
         )
 
         self.model.head = RetinaNetHead(

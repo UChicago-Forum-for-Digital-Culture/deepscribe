@@ -20,12 +20,14 @@ class SequentialRANSAC(BaseEstimator, ClusterMixin):
         max_trials=5000,
         max_slope=0.15,
         ridge_alpha=500,
+        assign_remaining_to_closest=True,
     ):
         self.residual_threshold = residual_threshold
         self.max_trials = max_trials
         self.ridge_alpha = ridge_alpha
         self.max_slope = max_slope
         self.max_lines = max_lines
+        self.assign_remaining_to_closest = assign_remaining_to_closest
 
     def fit(self, X, y=None):
         self.labels_ = np.full((X.shape[0]), -1)
@@ -48,7 +50,15 @@ class SequentialRANSAC(BaseEstimator, ClusterMixin):
                 max_trials=self.max_trials,
                 min_samples=2,
             )
-            ransac_line.fit(X[fit_mask, 0].reshape(-1, 1), X[fit_mask, 1])
+            # this usually happens when RANSAC can't find
+            # a valid consensus sample. If this happens, just
+            # stop fitting and assign the rest of the data to the closest line.
+            try:
+                ransac_line.fit(X[fit_mask, 0].reshape(-1, 1), X[fit_mask, 1])
+            except ValueError as e:
+                # if concensus set
+                print(e)
+                break
 
             self.ransac_lines.append(ransac_line)
 
@@ -62,18 +72,19 @@ class SequentialRANSAC(BaseEstimator, ClusterMixin):
             iters += 1
 
         # POSTPROCESSING: assign any unassigned to closest line
-        (unassigned,) = np.where(self.labels_ == -1)
-        # TODO: refactor and test this
-        for unassigned_pt in unassigned:
-            dists = [
-                dist_to_line_2d(
-                    fitted_line.estimator_.coef_[0],
-                    fitted_line.estimator_.intercept_,
-                    X[unassigned_pt, :],
-                )
-                for fitted_line in self.ransac_lines
-            ]
-            self.labels_[unassigned_pt] = np.argmin(dists)
+        if self.assign_remaining_to_closest:
+            (unassigned,) = np.where(self.labels_ == -1)
+            # TODO: refactor and test this
+            for unassigned_pt in unassigned:
+                dists = [
+                    dist_to_line_2d(
+                        fitted_line.estimator_.coef_[0],
+                        fitted_line.estimator_.intercept_,
+                        X[unassigned_pt, :],
+                    )
+                    for fitted_line in self.ransac_lines
+                ]
+                self.labels_[unassigned_pt] = np.argmin(dists)
 
         # sort the lines and points
         # rough heuristic: sort the lines by y-intercept, then sort points by x_coordinate
@@ -81,6 +92,7 @@ class SequentialRANSAC(BaseEstimator, ClusterMixin):
             fitted_line.estimator_.intercept_ for fitted_line in self.ransac_lines
         ]
         # not inverted - top-left corner is 0, 0
+        # TODO: fix behavior when no longer assigning remaining to closest
         label_ordering = np.argsort(line_intercepts)
         ordered_pts = []
         for label in label_ordering:
