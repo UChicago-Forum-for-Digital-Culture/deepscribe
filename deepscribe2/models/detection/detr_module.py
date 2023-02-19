@@ -1,12 +1,19 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
-from deepscribe2.models.detr.position_encoding import build_position_encoding
-from deepscribe2.models.detr.backbone import Backbone, Joiner
-from deepscribe2.models.detr.transformer import Transformer
-from deepscribe2.models.detr.detr import DETR, SetCriterion, PostProcess
-from deepscribe2.models.detr.matcher import HungarianMatcher
-from deepscribe2.models.detr.util.misc import NestedTensor
+
+from deepscribe2.models.detection.detr import (
+    build_position_encoding,
+    Backbone,
+    Joiner,
+    Transformer,
+    DETR,
+    SetCriterion,
+    PostProcess,
+    HungarianMatcher,
+    NestedTensor,
+)
+
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 
@@ -66,7 +73,7 @@ class DETRLightningModule(pl.LightningModule):
         self.model = DETR(
             backbone,
             xformer,
-            num_classes=num_classes + 1,
+            num_classes=self.hparams.num_classes + 1,
             num_queries=self.hparams.num_queries,
             aux_loss=self.hparams.aux_loss,
         )
@@ -91,14 +98,14 @@ class DETRLightningModule(pl.LightningModule):
         losses = ["labels", "boxes", "cardinality"]
 
         self.criterion = SetCriterion(
-            num_classes,
+            self.hparams.num_classes + 1,
             matcher=self.matcher,
             weight_dict=weight_dict,
             eos_coef=self.hparams.eos_coef,
             losses=losses,
         )
 
-        self.postprocessors = {"bbox": PostProcess()}
+        self.postprocessor = PostProcess()
 
         self.map = MeanAveragePrecision()
 
@@ -129,7 +136,7 @@ class DETRLightningModule(pl.LightningModule):
         )
         self.log("val_loss", loss)
 
-        postprocessed = self.postprocessors["bbox"](outputs, img_sizes)
+        postprocessed = self.postprocessor(outputs, img_sizes)
 
         self.map.update(postprocessed, targets)
 
