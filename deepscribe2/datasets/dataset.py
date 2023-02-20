@@ -67,7 +67,9 @@ class CuneiformLocalizationDataset(VisionDataset):
         if self.transforms:
             img, targets = self.transforms(img, targets)
 
-        return img, targets
+        # return img size for DETR usage
+
+        return img, targets, (entry["height"], entry["width"])
 
 
 def collate_retinanet(batch_input):
@@ -77,7 +79,7 @@ def collate_retinanet(batch_input):
                 img,
                 {key: val for key, val in lab.items()},
             )
-            for img, lab in batch_input
+            for img, lab, _ in batch_input
         ]
     )
     return list(images), list(targets)

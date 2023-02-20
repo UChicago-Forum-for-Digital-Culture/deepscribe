@@ -27,7 +27,7 @@ class DETRLightningModule(pl.LightningModule):
         backbone_name: str = "resnet50",
         dropout: float = 0.1,
         dilation: bool = True,
-        position_embedding: str = "v3",
+        position_embedding: str = "sine",
         enc_layers: int = 8,
         dec_layers: int = 8,
         pre_norm: bool = True,
@@ -41,6 +41,8 @@ class DETRLightningModule(pl.LightningModule):
         set_cost_bbox: float = 5,
         set_cost_giou: float = 2,
         eos_coef: float = 0.1,
+        bbox_loss_coef: float = 5,
+        giou_loss_coef: float = 2,
     ) -> None:
         super().__init__()
 
@@ -54,8 +56,8 @@ class DETRLightningModule(pl.LightningModule):
         backbone = Backbone(
             self.hparams.backbone_name, train_backbone, False, self.hparams.dilation
         )
-        backbone_model = Joiner(backbone, position_enc)
-        backbone_model.num_channels = backbone.num_channels
+        backbone_encoded = Joiner(backbone, position_enc)
+        backbone_encoded.num_channels = backbone.num_channels
 
         xformer = Transformer(
             d_model=self.hparams.hidden_dim,
@@ -71,7 +73,7 @@ class DETRLightningModule(pl.LightningModule):
         # finally, create detr!!
 
         self.model = DETR(
-            backbone,
+            backbone_encoded,
             xformer,
             num_classes=self.hparams.num_classes + 1,
             num_queries=self.hparams.num_queries,
@@ -113,15 +115,15 @@ class DETRLightningModule(pl.LightningModule):
         return self.model(samples)
 
     def training_step(self, batch, batch_idx):
-        samples, targets, img_sizes = batch
+        images, targets, _ = batch
 
-        outputs = self(samples)
+        outputs = self(images)
         loss_dict = self.criterion(outputs, targets)
         weight_dict = self.criterion.weight_dict
         loss = sum(
             loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
         )
-        self.log_dict(loss_dict, prog_bar=True)
+        self.log_dict(loss_dict, batch_size=images.tensors.size()[0], prog_bar=True)
 
         return loss
 
@@ -134,7 +136,11 @@ class DETRLightningModule(pl.LightningModule):
         loss = sum(
             loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict
         )
-        self.log("val_loss", loss)
+        self.log(
+            "val_loss",
+            loss,
+            batch_size=images.tensors.size()[0],
+        )
 
         postprocessed = self.postprocessor(outputs, img_sizes)
 
@@ -171,4 +177,4 @@ class DETRLightningModule(pl.LightningModule):
         )
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, self.hparams.lr_drop)
 
-        return {"optimizer": optimizer, "lr_schedule": lr_scheduler}
+        return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}

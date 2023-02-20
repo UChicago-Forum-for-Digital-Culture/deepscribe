@@ -94,7 +94,7 @@ class DeepScribePipeline(nn.Module):
                     cutouts_tensor = torch.stack(xformed_cutouts)
                     cutout_preds = self.classifier(cutouts_tensor)
                     # overwrite labels with predictions
-                    pred["labels"] = cutout_preds.topk(k=1, axis=1).indices
+                    pred["labels"] = cutout_preds.topk(k=1, axis=1).indices.flatten()
                     pred["classifier_top5"] = cutout_preds.topk(k=5, axis=1).indices
 
             # get sequence/ordering

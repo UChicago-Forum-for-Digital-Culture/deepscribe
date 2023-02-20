@@ -25,10 +25,10 @@ xforms = T.Compose(
 pfa_data_module = PFADetectionDataModule(
     DATA_BASE,
     autocrop=True,
-    batch_size=5,
+    batch_size=1,
     train_xforms=xforms,
     localization_only=LOCALIZATION_ONLY,
-    collate="detr",
+    collate_fn="detr",
 )
 
 model = DETRLightningModule(num_classes=pfa_data_module.num_labels)

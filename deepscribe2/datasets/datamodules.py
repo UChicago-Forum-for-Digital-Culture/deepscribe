@@ -20,7 +20,7 @@ from deepscribe2.datasets.dataset import (
     CuneiformLocalizationDataset,
     collate_retinanet,
 )
-from deepscribe2.models.detection.detr import collate_fn as collate_detr
+from deepscribe2.models.detection.detr import collate_and_scale as collate_detr
 
 generator = torch.Generator().manual_seed(42)
 
