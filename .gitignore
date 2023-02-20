@@ -8,6 +8,7 @@ wandb/*
 
 notebooks-testing/*
 deepscribe-torchvision*
+scripts_testing
 
 .vscode
 
