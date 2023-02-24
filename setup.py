@@ -12,6 +12,19 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
+    install_requires=[
+        "torch",
+        "torchvision",
+        "pytorch-lightning",
+        "torchmetrics",
+        "numpy",
+        "timm",
+        "editdistance",
+        "pandas",
+        "scikit-learn",
+        "Pillow",
+        "tqdm"
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

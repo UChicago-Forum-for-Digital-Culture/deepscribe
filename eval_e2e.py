@@ -6,6 +6,7 @@ from pathlib import Path
 import wandb
 import numpy as np
 from tqdm import tqdm
+import torch
 
 # download checkpoint locally (if not already cached)
 run = wandb.init(project="deepscribe-e2e")
@@ -23,34 +24,46 @@ classification_ckpt = Path(artifact_dir) / "model.ckpt"
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 
-pfa_datamodule = PFADetectionDataModule(DATA_BASE, batch_size=512)
+pfa_datamodule = PFADetectionDataModule(DATA_BASE, batch_size=10)
 pfa_datamodule.setup(stage="test")
 
 pipeline = DeepScribePipeline(
-    detection_ckpt, pfa_datamodule.categories_file, classifier_ckpt=classification_ckpt
+    detection_ckpt,
+    pfa_datamodule.categories_file,
+    classifier_ckpt=classification_ckpt,
+    score_thresh=0.5,
 )
+# use_cuda = torch.cuda.is_available()
+use_cuda = False
+if use_cuda:
+    pipeline.cuda()
 
 map_metric = MeanAveragePrecision()
 edit_dists = []
 
 failed = 0
 
-for imgs, targets in tqdm(pfa_datamodule.test_dataloader()):
-    preds = pipeline(imgs)
-
-    map_metric.update(preds, targets)
-
-    for pred, targ in zip(preds, targets):
-        if "ordering" in pred:
-            edit_dists.append(
-                editdistance.eval(
-                    pred["labels"].flatten()[pred["ordering"]].tolist(),
-                    targ["labels"].tolist(),
-                )
-            )
-        else:
-            failed += 1
-        # compute edit dist
+# i still cannot figure out the scope of torch.no_grad.
+with torch.no_grad():
+    for imgs, targets in tqdm(pfa_datamodule.test_dataloader()):
+        if use_cuda:
+            imgs = [img.cuda() for img in imgs]
+        preds = pipeline(imgs)
+        if use_cuda:
+            preds = {key: tns.cpu() for key, tns in preds.items()}
+        map_metric.update(preds, targets)
+        for pred, targ in zip(preds, targets):
+            if "ordering" in pred and pred["ordering"] is not None:
+                ordered_labels = pred["labels"][pred["ordering"]].tolist()
+                targ_labels = targ["labels"].tolist()
+                edit_dist = editdistance.eval(
+                    ordered_labels,
+                    targ_labels,
+                ) / len(targ_labels)
+                edit_dists.append(edit_dist)
+            else:
+                failed += 1
+            # compute edit dist
 
 print(
     f"edit dists: {np.median(edit_dists)} / {np.mean(edit_dists)} ({np.std(edit_dists)})"

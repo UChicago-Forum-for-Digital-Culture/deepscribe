@@ -61,6 +61,7 @@ class RetinaNet(LightningModule):
 
         loss_dict = self.model(images, targets)
         loss = sum(loss for loss in loss_dict.values())
+        self.log("loss", loss)
         self.log_dict(loss_dict, prog_bar=True)
         return loss
 

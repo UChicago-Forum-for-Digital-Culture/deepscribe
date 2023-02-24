@@ -1,13 +1,8 @@
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
 from deepscribe2.datasets import PFAClassificationDataModule
-
 from deepscribe2.models.classification import ImageClassifier
-from deepscribe2.transforms import SquarePad
-from deepscribe2.datasets.dataset_folder import HotspotDatasetFolder
-from deepscribe2.datasets.direct_dataset import DirectHotspotDataset
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
