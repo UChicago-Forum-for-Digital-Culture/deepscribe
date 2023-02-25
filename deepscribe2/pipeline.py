@@ -20,20 +20,15 @@ class DeepScribePipeline(nn.Module):
 
     def __init__(
         self,
-        detection_ckpt: str,
+        detector: str,
         sign_data: str,
-        classifier_ckpt: str = None,
+        classifier: str = None,
         score_thresh: float = 0.3,  # apply a score thresh on top of the existing score threshold.
     ) -> None:
         super().__init__()
 
-        self.detector = RetinaNet.load_from_checkpoint(detection_ckpt).eval()
-        self.classifier = (
-            ImageClassifier.load_from_checkpoint(classifier_ckpt).eval()
-            if classifier_ckpt
-            else None
-        )
-
+        self.detector = detector
+        self.classifier = classifier
         self.score_thresh = score_thresh
         # load classes info
         # pandas will interpret the sign "NA" as NaN
@@ -41,6 +36,25 @@ class DeepScribePipeline(nn.Module):
             sign_data, na_filter=False, names=["sign", "category_id"]
         )
         self.class_labels = sign_data["sign"].tolist()
+
+    @classmethod
+    def from_checkpoints(
+        cls,
+        detection_ckpt: str,
+        sign_data: str,
+        classifier_ckpt: str = None,
+        score_thresh: float = 0.3,
+    ):
+        detector = RetinaNet.load_from_checkpoint(detection_ckpt).eval()
+        classifier = (
+            ImageClassifier.load_from_checkpoint(classifier_ckpt).eval()
+            if classifier_ckpt
+            else None
+        )
+
+        return cls(
+            detector, sign_data, classifier=classifier, score_thresh=score_thresh
+        )
 
     @torch.no_grad()
     def forward(self, imgs: List[torch.Tensor]):

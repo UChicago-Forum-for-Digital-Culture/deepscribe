@@ -26,8 +26,8 @@ DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 
 pfa_datamodule = PFADetectionDataModule(DATA_BASE, batch_size=10)
 pfa_datamodule.setup(stage="test")
-
-pipeline = DeepScribePipeline(
+# can also initialize these from trained model objects directly.
+pipeline = DeepScribePipeline.from_checkpoints(
     detection_ckpt,
     pfa_datamodule.categories_file,
     classifier_ckpt=classification_ckpt,

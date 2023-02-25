@@ -32,6 +32,11 @@ CATEGORIES_BASE_FILE = "categories.txt"
 
 
 class PFADetectionDataModule(pl.LightningDataModule):
+    """
+    Bounding box DataModule. Will autocrop data and cache the results if requested.
+
+    """
+
     def __init__(
         self,
         base_dir: str,
