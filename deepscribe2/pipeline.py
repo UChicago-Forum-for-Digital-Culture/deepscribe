@@ -20,9 +20,9 @@ class DeepScribePipeline(nn.Module):
 
     def __init__(
         self,
-        detector: str,
+        detector: RetinaNet,
         sign_data: str,
-        classifier: str = None,
+        classifier: ImageClassifier = None,
         score_thresh: float = 0.3,  # apply a score thresh on top of the existing score threshold.
     ) -> None:
         super().__init__()
