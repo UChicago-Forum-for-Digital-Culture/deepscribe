@@ -10,7 +10,7 @@ from deepscribe2.models import RetinaNet
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision"
 MONITOR_ATTRIBUTE = "loss"
-LOCALIZATION_ONLY = False
+LOCALIZATION_ONLY = True
 
 xforms = T.Compose(
     [
@@ -32,17 +32,7 @@ pfa_data_module = PFADetectionDataModule(
     localization_only=LOCALIZATION_ONLY,
 )
 
-model = RetinaNet(num_classes=pfa_data_module.num_labels, learning_rate=1e-2)
-
-# load artifact!!
-
-# download checkpoint locally (if not already cached)
-# run = wandb.init(project=WANDB_PROJECT)
-# ARTIFACT_NAME = "model-rf7yd52w:v19"
-# artifact = run.use_artifact(f"ecw/{WANDB_PROJECT}/{ARTIFACT_NAME}", type="model")
-# artifact_dir = artifact.download()
-# ckpt_path = Path(artifact_dir) / "model.ckpt"
-# model = RetinaNet.load_from_checkpoint(ckpt_path)
+model = RetinaNet(num_classes=1)
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
