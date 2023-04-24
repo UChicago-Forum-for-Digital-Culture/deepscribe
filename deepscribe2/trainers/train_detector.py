@@ -32,7 +32,7 @@ pfa_data_module = PFADetectionDataModule(
     localization_only=LOCALIZATION_ONLY,
 )
 
-model = RetinaNet(num_classes=pfa_data_module.num_labels, learning_rate=1e-2)
+model = RetinaNet(num_classes=pfa_data_module.num_labels, learning_rate=1e-3)
 
 # load artifact!!
 

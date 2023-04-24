@@ -48,6 +48,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
         localization_only: bool = False,
         collate_fn: str = "retinanet",
         n_workers: int = 12,
+        start_from_one: bool = True,  # retinanet expects 0 as background, 1 as class.
     ) -> None:
         super().__init__()
 
@@ -78,6 +79,8 @@ class PFADetectionDataModule(pl.LightningDataModule):
         )
         self.class_labels = sign_data["sign"].tolist()
         self.num_labels = 1 if self.hparams.localization_only else len(sign_data)
+        if self.hparams.start_from_one:
+            self.num_labels += 1
 
     @property
     def image_dir(self):
@@ -195,6 +198,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                 self.categories_file,
                 transforms=self.hparams.train_xforms,
                 localization_only=self.hparams.localization_only,
+                start_from_one=self.hparams.start_from_one,
             )
 
             self.val_dataset = CuneiformLocalizationDataset(
@@ -203,6 +207,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                 self.categories_file,
                 transforms=None,
                 localization_only=self.hparams.localization_only,
+                start_from_one=self.hparams.start_from_one,
             )
         if stage == "test":
             self.test_dataset = CuneiformLocalizationDataset(
@@ -211,6 +216,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                 self.categories_file,
                 transforms=None,
                 localization_only=self.hparams.localization_only,
+                start_from_one=self.hparams.start_from_one,
             )
 
     def train_dataloader(self):
@@ -276,6 +282,8 @@ class PFAClassificationDataModule(pl.LightningDataModule):
         )
         self.class_labels = sign_data["sign"].tolist()
         self.num_labels = len(sign_data)
+        if self.hparams.start_from_one:
+            self.num_labels += 1
 
     @property
     def categories_file(self):
