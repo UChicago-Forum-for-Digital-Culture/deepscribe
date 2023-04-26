@@ -30,16 +30,18 @@ class RetinaNet(LightningModule):
         backbone: Optional[str] = None,
         score_thresh: float = 0.3,  # from detectron configs
         nms_thresh: float = 0.2,  # from detectron configs
-        base_lr: float = 1e-3,  # retinanet paper uses 1e-2 but i've never been able to get that to work on this corpus.
+        base_lr: float = 1e-4,  # retinanet paper uses 1e-2 but i've never been able to get that to work on this corpus.
+        lr_decay: bool = True,
         lr_decay_step: int = 50,
         lr_decay_gamma: float = 0.1,
+        lr_reduce_patience: Optional[int] = 10,
         weight_decay: float = 1e-4,
         momentum: float = 0.9,
         classification_prior: float = 0.01,
         fl_gamma: float = 2,
         fl_alpha: float = 0.25,
         reg_loss_type: str = "smooth_l1",
-        reg_loss_beta: float = 1.0,  # if using smooth l1 loss - 1.0 was default in torchvision but 0.1 in detectron2.
+        reg_loss_beta: float = 0.1,  # if using smooth l1 loss - 1.0 was default in torchvision but 0.1 in detectron2.
         topk_candidates: int = 1000,
         detections_per_img=300,
     ):
@@ -117,8 +119,29 @@ class RetinaNet(LightningModule):
             weight_decay=self.hparams.weight_decay,
         )
 
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, self.hparams.lr_decay_step, gamma=self.hparams.lr_decay_gamma
-        )
+        lr_schedulers = []
 
-        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+        if self.hparams.lr_decay:
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                optimizer, self.hparams.lr_decay_step, gamma=self.hparams.lr_decay_gamma
+            )
+            scheduler_config = {
+                "scheduler": scheduler,
+                "interval": "epoch",
+                "name": "stepLR",
+            }
+
+            lr_schedulers.append(scheduler_config)
+
+        if self.hparams.lr_reduce_patience:
+            reduce_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode="max"
+            )
+            scheduler_config = {
+                "scheduler": reduce_scheduler,
+                "interval": "epoch",
+                "name": "reduce_on_plateau",
+                "monitor": "map_50",
+            }
+
+        return [optimizer], lr_schedulers

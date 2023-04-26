@@ -42,6 +42,7 @@ model = DETRLightningModule(num_classes=pfa_data_module.num_labels)
 # model = RetinaNet.load_from_checkpoint(Path(artifact_dir) / "model.ckpt")
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
+
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
     monitor=MONITOR_ATTRIBUTE, mode="max"
 )
