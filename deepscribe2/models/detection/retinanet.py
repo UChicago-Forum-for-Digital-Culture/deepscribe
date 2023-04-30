@@ -27,7 +27,7 @@ class RetinaNet(LightningModule):
     def __init__(
         self,
         num_classes: int,  # number OF classes INCLUDING BACKGROUND!!!!! They finally fixed the docs.
-        backbone: Optional[str] = None,
+        # backbone: Optional[str] = None,
         score_thresh: float = 0.3,  # from detectron configs
         nms_thresh: float = 0.2,  # from detectron configs
         base_lr: float = 1e-4,  # retinanet paper uses 1e-2 but i've never been able to get that to work on this corpus.

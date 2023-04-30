@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import wandb
 from deepscribe2 import transforms as T
 from deepscribe2.datasets import PFADetectionDataModule
-from deepscribe2.models import RetinaNet
+from deepscribe2.models.detection.retinanet_old import RetinaNet
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision"
@@ -25,7 +25,7 @@ xforms = T.Compose(
 )
 
 batch_size = 3
-start_from_one = True
+start_from_one = False
 
 pfa_data_module = PFADetectionDataModule(
     DATA_BASE,
@@ -33,7 +33,7 @@ pfa_data_module = PFADetectionDataModule(
     batch_size=batch_size,
     train_xforms=xforms,
     localization_only=LOCALIZATION_ONLY,
-    start_from_one=True,  # this is required for retinanet to work properly.
+    start_from_one=start_from_one,  # this is required for retinanet to work properly.
 )
 
 print(
@@ -41,7 +41,11 @@ print(
 )
 
 model = RetinaNet(
-    num_classes=pfa_data_module.num_labels, lr_decay=False, lr_reduce_patience=10
+    num_classes=pfa_data_module.num_labels,
+    # lr_decay=False,
+    # lr_reduce_patience=10,
+    # weight_decay=5e-3,
+    # nms_thresh=0.5,
 )
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
