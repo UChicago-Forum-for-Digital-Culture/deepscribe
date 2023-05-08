@@ -4,6 +4,8 @@ from torch.utils.data import DataLoader
 from deepscribe2.datasets.dataset import CuneiformLocalizationDataset, collate_retinanet
 from deepscribe2.models.detection.retinanet_old import RetinaNet
 from deepscribe2 import transforms as T
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 
@@ -39,6 +41,7 @@ loader = DataLoader(
     ),
     batch_size=5,
     collate_fn=collate_retinanet,
+    shuffle=True,
     num_workers=12,
 )
 val_loader = DataLoader(
@@ -53,5 +56,9 @@ val_loader = DataLoader(
 logger = pl.loggers.WandbLogger(project="deepscribe-torchvision")
 # logger = pl.loggers.CSVLogger("logs")
 
-trainer = pl.Trainer(accelerator="gpu", devices=1, logger=logger, max_epochs=100)
+earlystop = EarlyStopping("map_50", mode="max", patience=15)
+
+trainer = pl.Trainer(
+    accelerator="gpu", devices=1, logger=logger, max_epochs=2500, callbacks=[earlystop]
+)
 trainer.fit(model, train_dataloaders=loader, val_dataloaders=val_loader)

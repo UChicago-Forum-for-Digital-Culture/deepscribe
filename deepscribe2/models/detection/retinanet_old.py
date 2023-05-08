@@ -24,8 +24,8 @@ class RetinaNet(LightningModule):
         self.model = retinanet_resnet50_fpn(
             trainable_backbone_layers=5,
             weights_backbone=None,
-            score_thresh=score_thresh,
-            nms_thres=nms_thresh,
+            # score_thresh=score_thresh,
+            # nms_thresh=nms_thresh,
             **kwargs
         )
 
@@ -63,10 +63,28 @@ class RetinaNet(LightningModule):
         self.log_dict(loss_dict, prog_bar=True)
         return loss
 
-    def configure_optimizers(self):
-        return torch.optim.SGD(
+    # def configure_optimizers(self):
+    #     return torch.optim.SGD(
+    #         self.model.parameters(),
+    #         lr=self.learning_rate,
+    #         momentum=0.9,
+    #         weight_decay=0.005,
+    #     )
+
+    def configure_optimizers(self) -> Any:
+        optimizer = torch.optim.AdamW(
             self.model.parameters(),
-            lr=self.learning_rate,
-            momentum=0.9,
-            weight_decay=0.005,
+            lr=self.learning_rate,  # weight_decay=0.005
         )
+
+        reduce_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", patience=5
+        )
+        scheduler_config = {
+            "scheduler": reduce_scheduler,
+            "interval": "epoch",
+            "name": "reduce_on_plateau",
+            "monitor": "map_50",
+        }
+
+        return [optimizer], [scheduler_config]
