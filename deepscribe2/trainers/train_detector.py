@@ -34,16 +34,6 @@ pfa_data_module = PFADetectionDataModule(
 
 model = RetinaNet(num_classes=pfa_data_module.num_labels, learning_rate=1e-3)
 
-# load artifact!!
-
-# download checkpoint locally (if not already cached)
-# run = wandb.init(project=WANDB_PROJECT)
-# ARTIFACT_NAME = "model-rf7yd52w:v19"
-# artifact = run.use_artifact(f"ecw/{WANDB_PROJECT}/{ARTIFACT_NAME}", type="model")
-# artifact_dir = artifact.download()
-# ckpt_path = Path(artifact_dir) / "model.ckpt"
-# model = RetinaNet.load_from_checkpoint(ckpt_path)
-
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
     monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=5

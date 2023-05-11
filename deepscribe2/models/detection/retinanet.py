@@ -9,7 +9,7 @@ from torchvision.models.detection.retinanet import RetinaNet as torchvision_reti
 from torchvision.models.detection.retinanet import _default_anchorgen, resnet50
 from torchvision.ops.feature_pyramid_network import LastLevelP6P7
 
-from deepscribe2.models.detection import RetinaNetHeadCustomizable
+from deepscribe2.models.detection.retinanet_head import RetinaNetHeadCustomizable
 
 
 # NOTE: ZERO IS BACKGROUND
@@ -21,7 +21,7 @@ class RetinaNet(LightningModule):
         score_thresh=0.05,  # differ from detectron configs, but better results this way. Detectron configs were 0.3 and 0.2 respectively.
         nms_thresh=0.5,
         base_lr: float = 1e-4,  # retinanet paper uses 1e-2 but i've never been able to get that to work on this corpus.
-        lr_reduce_patience: Optional[int] = 10,
+        lr_reduce_patience: int = 5,
         weight_decay: float = 0.0,  # in practice data aug is effective enough at regularization.
         # momentum: float = 0.9,
         classification_prior: float = 0.01,
@@ -31,6 +31,7 @@ class RetinaNet(LightningModule):
         reg_loss_beta: float = 1.0,  # if using smooth l1 loss - 1.0 was default in torchvision but 0.1 in detectron2.
         topk_candidates: int = 1000,
         detections_per_img=300,
+        optimizer: str = "adamw",
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -98,14 +99,28 @@ class RetinaNet(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            lr=self.hparams.base_lr,
-            weight_decay=self.hparams.weight_decay,
-        )
+        if self.hparams.optimizer == "adam":
+            optimizer = torch.optim.Adam(
+                self.model.parameters(),
+                lr=self.hparams.base_lr,
+                weight_decay=self.hparams.weight_decay,
+            )
+        elif self.hparams.optimizer == "adamw":
+            optimizer = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=self.hparams.base_lr,
+                weight_decay=self.hparams.weight_decay,
+            )
+        elif self.hparams.optimizer == "sgd":
+            optimizer = torch.optim.SGD(
+                self.model.parameters(),
+                lr=self.hparams.base_lr,
+                momentum=0.9,
+                weight_decay=self.hparams.weight_decay,
+            )
         scheduler_config = {
             "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode="max"
+                optimizer, mode="max", patience=self.hparams.lr_reduce_patience
             ),
             "interval": "epoch",
             "name": "reduce_on_plateau",

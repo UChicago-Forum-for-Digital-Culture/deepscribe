@@ -1,5 +1,7 @@
 # copied from torchvision. Wanted to use transforms v2 API, but alas.
 
+# I think torchvision transforms v2 API is now in 0.15! switch to that.
+
 from typing import Dict, List, Optional, Tuple, Union
 
 
