@@ -22,10 +22,12 @@ class CuneiformLocalizationDataset(VisionDataset):
         transforms: Optional[Callable] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
+        start_from_one: bool = False,
     ) -> None:
         super().__init__(img_root, transforms, transform, target_transform)
 
         self.localization_only = localization_only
+        self.start_from_one = start_from_one
 
         # load classes info
         # pandas will interpret the sign "NA" as NaN
@@ -35,6 +37,8 @@ class CuneiformLocalizationDataset(VisionDataset):
 
         self.class_labels = self.sign_data["sign"].tolist()
         self.num_labels = 1 if self.localization_only else len(self.sign_data)
+        if self.start_from_one:
+            self.num_labels += 1
 
         # open labels file
         with open(labels) as inf:
@@ -49,11 +53,17 @@ class CuneiformLocalizationDataset(VisionDataset):
         # rescaling to between 0 and 1
         img = read_image(f"{self.root}/{entry['file_name']}") / 255.0
 
+        # UPDATING TO MATCH LATEST RETINANET DOCS.
+        # BACKGROUND CLASS IS ZERO!!!!
+        # man that was annoying.
+
         bboxes, labels = zip(
             *[
                 (
                     annotation["bbox"],
-                    annotation["category_id"] if not self.localization_only else 0,
+                    annotation["category_id"] + int(self.start_from_one)
+                    if not self.localization_only
+                    else int(self.start_from_one),
                 )
                 for annotation in entry["annotations"]
             ]

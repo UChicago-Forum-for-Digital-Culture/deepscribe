@@ -28,6 +28,8 @@ You can download the publicly availble subset of the Persepolis Fortification Ar
     - File mapping sign names to the `category_id` values used for labels. 
 
 
+This dataset is released with the license specified in `DATASET_LICENSE.md` in this repo.
+
 ## DataModules
 
 This Python package includes two [DataModules](https://pytorch-lightning.readthedocs.io/en/stable/data/datamodule.html) that package and preprocess PFA data for ease of training. The first is the `PFADetectionDataModule` which handles bounding box data, and `PFAClassificationDataModule` which pulls out individual bounding boxes and produces a classification dataset. Some notes about each dataset are found below.
