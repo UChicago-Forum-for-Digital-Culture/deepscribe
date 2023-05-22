@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
 from deepscribe2.datasets.dataset import CuneiformLocalizationDataset, collate_retinanet
-from deepscribe2.models.detection.retinanet_old import RetinaNet
+from deepscribe2.models.detection.retinanet import RetinaNet
 from deepscribe2 import transforms as T
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -14,6 +14,10 @@ imgs_base = f"{DATA_BASE}/cropped_images"
 
 train_file = f"{DATA_BASE}/data_train.json"
 val_file = f"{DATA_BASE}/data_val.json"
+
+# train_file = f"{DATA_BASE}/data_train_cropped.json"
+# val_file = f"{DATA_BASE}/data_val_cropped.json"
+
 categories_file = f"{DATA_BASE}/categories.txt"
 
 
@@ -53,12 +57,19 @@ val_loader = DataLoader(
     num_workers=12,
 )
 
-logger = pl.loggers.WandbLogger(project="deepscribe-torchvision")
+logger = pl.loggers.WandbLogger(project="deepscribe-torchvision", log_model="all")
 # logger = pl.loggers.CSVLogger("logs")
 
 earlystop = EarlyStopping("map_50", mode="max", patience=15)
+lr_callback = pl.callbacks.LearningRateMonitor(
+    logging_interval="epoch", log_momentum=False
+)
 
 trainer = pl.Trainer(
-    accelerator="gpu", devices=1, logger=logger, max_epochs=2500, callbacks=[earlystop]
+    accelerator="gpu",
+    devices=1,
+    logger=logger,
+    max_epochs=2500,
+    callbacks=[earlystop, lr_callback],
 )
 trainer.fit(model, train_dataloaders=loader, val_dataloaders=val_loader)

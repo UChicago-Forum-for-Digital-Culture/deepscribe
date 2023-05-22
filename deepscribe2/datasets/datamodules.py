@@ -167,7 +167,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
         if (
             os.path.exists(self.train_partition)
             or os.path.exists(self.val_partition)
-            or os.path.exists(self.val_partition)
+            or os.path.exists(self.test_partition)
         ):
             print("Split files already exist, skipping.")
         else:

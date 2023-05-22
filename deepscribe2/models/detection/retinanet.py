@@ -8,6 +8,7 @@ from torchvision.models.detection.backbone_utils import _resnet_fpn_extractor
 from torchvision.models.detection.retinanet import RetinaNet as torchvision_retinanet
 from torchvision.models.detection.retinanet import _default_anchorgen, resnet50
 from torchvision.ops.feature_pyramid_network import LastLevelP6P7
+from torchvision.models.detection.retinanet import RetinaNetHead, retinanet_resnet50_fpn
 
 from deepscribe2.models.detection.retinanet_head import RetinaNetHeadCustomizable
 
@@ -22,7 +23,7 @@ class RetinaNet(LightningModule):
         nms_thresh=0.5,
         base_lr: float = 1e-4,  # retinanet paper uses 1e-2 but i've never been able to get that to work on this corpus.
         lr_reduce_patience: int = 5,
-        weight_decay: float = 0.0,  # in practice data aug is effective enough at regularization.
+        weight_decay: float = 0.01,
         # momentum: float = 0.9,
         classification_prior: float = 0.01,
         fl_gamma: float = 2,
@@ -30,7 +31,7 @@ class RetinaNet(LightningModule):
         reg_loss_type: str = "l1",
         reg_loss_beta: float = 1.0,  # if using smooth l1 loss - 1.0 was default in torchvision but 0.1 in detectron2.
         topk_candidates: int = 1000,
-        detections_per_img=300,
+        detections_per_img: int = 300,
         optimizer: str = "adamw",
     ):
         super().__init__()
@@ -40,19 +41,26 @@ class RetinaNet(LightningModule):
 
     def make_resnet(self):
         # configs the resnet.
-        backbone_base = resnet50(
-            weights=None, progress=False, norm_layer=nn.BatchNorm2d
-        )
-        backbone = _resnet_fpn_extractor(
-            backbone_base,
-            5,
-            returned_layers=[2, 3, 4],
-            extra_blocks=LastLevelP6P7(256, 256),
-        )
+        # backbone_base = resnet50(
+        #     weights=None, progress=False, norm_layer=nn.BatchNorm2d
+        # )
+        # backbone = _resnet_fpn_extractor(
+        #     backbone_base,
+        #     5,
+        #     returned_layers=[2, 3, 4],
+        #     extra_blocks=LastLevelP6P7(256, 256),
+        # )
         anchor_generator = _default_anchorgen()
 
-        head = RetinaNetHeadCustomizable(
-            in_channels=backbone.out_channels,
+        model = retinanet_resnet50_fpn(
+            trainable_backbone_layers=5,
+            weights_backbone=None,
+            # score_thresh=score_thresh,
+            # nms_thresh=nms_thresh,
+        )
+
+        model.head = RetinaNetHeadCustomizable(
+            in_channels=model.backbone.out_channels,
             num_anchors=anchor_generator.num_anchors_per_location()[0],
             num_classes=self.hparams.num_classes,
             prior_probability=self.hparams.classification_prior,
@@ -62,15 +70,15 @@ class RetinaNet(LightningModule):
             reg_loss_beta=self.hparams.reg_loss_beta,
         )
 
-        model = torchvision_retinanet(
-            backbone,
-            self.hparams.num_classes,
-            nms_thresh=self.hparams.nms_thresh,
-            score_thresh=self.hparams.score_thresh,
-            head=head,
-            topk_candidates=self.hparams.topk_candidates,
-            detections_per_img=self.hparams.detections_per_img,
-        )
+        # model = torchvision_retinanet(
+        #     backbone,
+        #     self.hparams.num_classes,
+        #     nms_thresh=self.hparams.nms_thresh,
+        #     score_thresh=self.hparams.score_thresh,
+        #     head=head,
+        #     topk_candidates=self.hparams.topk_candidates,
+        #     detections_per_img=self.hparams.detections_per_img,
+        # )
 
         return model
 
