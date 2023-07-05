@@ -314,6 +314,10 @@ class SetCriterion(nn.Module):
 class PostProcess(nn.Module):
     """This module converts the model's output into the format expected by the coco api"""
 
+    def __init__(self, override_nones: bool = False) -> None:
+        super().__init__()
+        self.override_nones = override_nones
+
     @torch.no_grad()
     def forward(self, outputs, target_sizes):
         """Perform the computation
@@ -325,12 +329,6 @@ class PostProcess(nn.Module):
         """
         out_logits, out_bbox = outputs["pred_logits"], outputs["pred_boxes"]
 
-        assert len(out_logits) == len(target_sizes)
-        assert target_sizes.shape[1] == 2
-
-        prob = F.softmax(out_logits, -1)
-        scores, labels = prob[..., :-1].max(-1)
-
         # convert to [x0, y0, x1, y1] format
         boxes = box_ops.box_cxcywh_to_xyxy(out_bbox)
         # and from relative [0, 1] to absolute [0, height] coordinates
@@ -338,10 +336,27 @@ class PostProcess(nn.Module):
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = boxes * scale_fct[:, None, :]
 
-        results = [
-            {"scores": s, "labels": l, "boxes": b}
-            for s, l, b in zip(scores, labels, boxes)
-        ]
+        assert len(out_logits) == len(target_sizes)
+        assert target_sizes.shape[1] == 2
+
+        prob = F.softmax(out_logits, -1)
+        if (
+            self.override_nones
+        ):  # default behavior WAS to replace no-obj classes with their second most likely option. I don't like this.
+            scores, labels = prob[..., :-1].max(-1)
+            results = [
+                {"scores": s, "labels": l, "boxes": b}
+                for s, l, b in zip(scores, labels, boxes)
+            ]
+        else:
+            scores, labels = prob.max(-1)
+            no_obj_label = prob.shape[-1] - 1
+            results = []
+            for s, l, b in zip(scores, labels, boxes):
+                mask = l != no_obj_label
+                results.append(
+                    {"scores": s[mask], "labels": l[mask], "boxes": b[mask, :]}
+                )
 
         return results
 
