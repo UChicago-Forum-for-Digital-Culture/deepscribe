@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
+from typing import Dict, Any
 
 from deepscribe2.models.detection.detr import (
     build_position_encoding,
@@ -13,8 +14,18 @@ from deepscribe2.models.detection.detr import (
     HungarianMatcher,
     NestedTensor,
 )
+from deepscribe2.models.detection.detr.util import box_ops
 
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
+
+
+# converts scaled down boxes in xyxywh normalized back
+# to original sizes.
+def unscale_boxes(boxes, img_w, img_h):
+    boxes = box_ops.box_cxcywh_to_xyxy(boxes)
+    scale_fct = torch.tensor([img_w, img_h, img_w, img_h], device=boxes.device)
+    boxes = boxes * scale_fct
+    return boxes
 
 
 class DETRLightningModule(pl.LightningModule):
@@ -26,7 +37,7 @@ class DETRLightningModule(pl.LightningModule):
         hidden_dim: int = 256,
         backbone_name: str = "resnet50",
         dropout: float = 0.1,
-        dilation: bool = True,
+        dilation: bool = False,
         position_embedding: str = "sine",
         enc_layers: int = 8,
         dec_layers: int = 8,
@@ -54,7 +65,10 @@ class DETRLightningModule(pl.LightningModule):
         )
         train_backbone = self.hparams.lr_backbone > 0
         backbone = Backbone(
-            self.hparams.backbone_name, train_backbone, False, self.hparams.dilation
+            self.hparams.backbone_name,
+            train_backbone=train_backbone,
+            return_interm_layers=False,
+            dilation=self.hparams.dilation,
         )
         backbone_encoded = Joiner(backbone, position_enc)
         backbone_encoded.num_channels = backbone.num_channels
@@ -75,7 +89,7 @@ class DETRLightningModule(pl.LightningModule):
         self.model = DETR(
             backbone_encoded,
             xformer,
-            num_classes=self.hparams.num_classes + 1,
+            num_classes=self.hparams.num_classes,
             num_queries=self.hparams.num_queries,
             aux_loss=self.hparams.aux_loss,
         )
@@ -100,7 +114,7 @@ class DETRLightningModule(pl.LightningModule):
         losses = ["labels", "boxes", "cardinality"]
 
         self.criterion = SetCriterion(
-            self.hparams.num_classes + 1,
+            self.hparams.num_classes,
             matcher=self.matcher,
             weight_dict=weight_dict,
             eos_coef=self.hparams.eos_coef,
@@ -110,6 +124,17 @@ class DETRLightningModule(pl.LightningModule):
         self.postprocessor = PostProcess()
 
         self.map = MeanAveragePrecision()
+
+    def init_backbone_from_retinanet_state(self, retinanet_state_dict: Dict[str, Any]):
+        # get the matching weights from the retinanet state dict
+
+        backbone_state = {
+            key.replace("model.backbone.", ""): val
+            for key, val in retinanet_state_dict.items()
+            if "backbone" in key and "fpn" not in key  # removing FPN-specific layers
+        }
+
+        self.model.backbone[0].load_state_dict(backbone_state, strict=True)
 
     def forward(self, samples: NestedTensor):
         return self.model(samples)
@@ -130,6 +155,9 @@ class DETRLightningModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         images, targets, img_sizes = batch
 
+        # print(targets)
+        # raise ValueError()
+
         outputs = self(images)
         loss_dict = self.criterion(outputs, targets)
         weight_dict = self.criterion.weight_dict
@@ -142,7 +170,19 @@ class DETRLightningModule(pl.LightningModule):
             batch_size=images.tensors.size()[0],
         )
 
+        # do we need to filter the labels?
         postprocessed = self.postprocessor(outputs, img_sizes)
+
+        # print(targets[0].keys())
+
+        for elem, (orig_h, orig_w) in zip(targets, img_sizes):
+            elem["boxes"] = unscale_boxes(elem["boxes"], img_w=orig_w, img_h=orig_h)
+
+        # print(targets[0]["boxes"])
+
+        # raise ValueError()
+        # print(postprocessed[0]["labels"])
+        # unsa
 
         self.map.update(postprocessed, targets)
 

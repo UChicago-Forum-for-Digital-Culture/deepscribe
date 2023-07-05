@@ -13,9 +13,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=[
-        "torch=1.13.1",
-        "torchvision==0.14.1",
-        "pytorch-lightning=1.9.0",
+        "torch>=1.13.1",
+        "torchvision>=0.14.1",
+        "pytorch-lightning>=1.9.0",
         "torchmetrics",
         "numpy",
         "timm",

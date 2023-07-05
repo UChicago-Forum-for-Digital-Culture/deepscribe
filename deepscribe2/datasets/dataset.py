@@ -1,10 +1,31 @@
 import json
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Any
 
 import pandas as pd
 import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_image
+
+# from torchvision.datapoints import BoundingBox, BoundingBoxFormat
+
+
+# # converts a dataset entry to the labels required by transforms v2.
+# def entry_to_datapoints(
+#     dataset_entry: Dict[str, Any], increase_label_by: int = 0
+# ) -> Dict[str, Any]:
+#     boxes = [
+#         BoundingBox(
+#             anno["bbox"],
+#             format=BoundingBoxFormat.XYXY,
+#             spatial_size=(dataset_entry["height"], dataset_entry["width"]),
+#         )
+#         for anno in dataset_entry["annotations"]
+#     ]
+
+#     labels = [
+#         anno["category_id"] + increase_label_by for anno in dataset_entry["annotations"]
+#     ]
+#     return {"boxes": boxes, "labels": labels}
 
 
 class CuneiformLocalizationDataset(VisionDataset):
@@ -20,11 +41,9 @@ class CuneiformLocalizationDataset(VisionDataset):
         classes_info: str,
         localization_only=False,
         transforms: Optional[Callable] = None,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
         start_from_one: bool = False,
     ) -> None:
-        super().__init__(img_root, transforms, transform, target_transform)
+        super().__init__(img_root, transforms, transform=None, target_transform=None)
 
         self.localization_only = localization_only
         self.start_from_one = start_from_one
@@ -57,6 +76,10 @@ class CuneiformLocalizationDataset(VisionDataset):
         # BACKGROUND CLASS IS ZERO!!!!
         # man that was annoying.
 
+        # targets = entry_to_datapoints(
+        #     entry, increase_label_by=1 if self.start_from_one else 0
+        # )
+
         bboxes, labels = zip(
             *[
                 (
@@ -79,7 +102,9 @@ class CuneiformLocalizationDataset(VisionDataset):
 
         # return img size for DETR usage
 
-        return img, targets, (entry["height"], entry["width"])
+        _, height, width = img.size()
+
+        return img, targets, (height, width)
 
 
 def collate_retinanet(batch_input):

@@ -1,8 +1,10 @@
+import pickle as pkl
 import warnings
 from typing import List
 
 import pandas as pd
 import torch
+from nltk.lm.api import LanguageModel
 from torch import nn
 from torchvision import transforms as T
 
@@ -23,6 +25,7 @@ class DeepScribePipeline(nn.Module):
         detector: RetinaNet,
         sign_data: str,
         classifier: ImageClassifier = None,
+        language_model: LanguageModel = None,
         score_thresh: float = 0.3,  # apply a score thresh on top of the existing score threshold.
     ) -> None:
         super().__init__()
@@ -30,6 +33,7 @@ class DeepScribePipeline(nn.Module):
         self.detector = detector
         self.classifier = classifier
         self.score_thresh = score_thresh
+        self.language_model = language_model
         # load classes info
         # pandas will interpret the sign "NA" as NaN
         sign_data = pd.read_csv(
@@ -43,6 +47,7 @@ class DeepScribePipeline(nn.Module):
         detection_ckpt: str,
         sign_data: str,
         classifier_ckpt: str = None,
+        lm_pickle: str = None,
         score_thresh: float = 0.3,
     ):
         detector = RetinaNet.load_from_checkpoint(detection_ckpt).eval()
@@ -52,8 +57,18 @@ class DeepScribePipeline(nn.Module):
             else None
         )
 
+        if lm_pickle is not None:
+            with open(lm_pickle, "rb") as inf:
+                lm = pkl.load(inf)
+        else:
+            lm = None
+
         return cls(
-            detector, sign_data, classifier=classifier, score_thresh=score_thresh
+            detector,
+            sign_data,
+            classifier=classifier,
+            score_thresh=score_thresh,
+            language_model=lm,
         )
 
     @torch.no_grad()

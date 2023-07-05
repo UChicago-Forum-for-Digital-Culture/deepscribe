@@ -20,6 +20,7 @@ from deepscribe2.datasets.dataset import (
     CuneiformLocalizationDataset,
     collate_retinanet,
 )
+from deepscribe2 import transforms as T_ds
 from deepscribe2.models.detection.detr import collate_and_scale as collate_detr
 
 generator = torch.Generator().manual_seed(42)
@@ -205,7 +206,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                 self.val_partition,
                 self.image_dir,
                 self.categories_file,
-                transforms=None,
+                transforms=T_ds.RandomShortestSize([800], max_size=1333),
                 localization_only=self.hparams.localization_only,
                 start_from_one=self.hparams.start_from_one,
             )
@@ -214,7 +215,7 @@ class PFADetectionDataModule(pl.LightningDataModule):
                 self.test_partition,
                 self.image_dir,
                 self.categories_file,
-                transforms=None,
+                transforms=T_ds.RandomShortestSize([800], max_size=1333),
                 localization_only=self.hparams.localization_only,
                 start_from_one=self.hparams.start_from_one,
             )

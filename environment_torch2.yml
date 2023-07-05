@@ -1,0 +1,27 @@
+name: deepscribe_torch2
+channels:
+ - pytorch
+ - nvidia
+ - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch=2.0.1
+  - pytorch-cuda=11.7
+  - torchvision=0.15.2 
+  - black
+  - pytorch-lightning
+  - torchmetrics
+  - nb_conda
+  - pandas
+  - scikit-learn
+  - numpy
+  - matplotlib
+  - Pillow
+  - tqdm
+  - ipykernel
+  - ipywidgets
+  - pip
+  - pip:
+    - timm
+    - editdistance
+    - wandb

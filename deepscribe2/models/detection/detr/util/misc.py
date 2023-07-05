@@ -108,7 +108,7 @@ def collate_fn(batch):
     return imgs_padded, targets, original_sizes
 
 
-# TODO: normalize to original size or the padded size???
+# I think this should be normalizing to original size, WITHOUT padding!
 # it looks like this is how the unscaling code works
 def collate_and_scale(batch):
     # collates tensors and rescales/normalizes boxes.
@@ -116,12 +116,27 @@ def collate_and_scale(batch):
 
     imgs_padded = nested_tensor_from_tensor_list(imgs_raw)
 
+    # boxes are xyxy
+
     for targ, (orig_h, orig_w) in zip(targets, sizes):
+        # normalize by original w and h
+
+        boxes = targ["boxes"].float()
+
+        # rescale -> convert should work fine too,
+        # this is just exactly how they did it in DETR.
         # convert to cxcywh
-        targ["boxes"] = box_xyxy_to_cxcywh(targ["boxes"].float())
-        # normalize by original w and h, perhaps not correct
-        targ["boxes"][:, (0, 2)] = targ["boxes"][:, (0, 2)] / orig_w
-        targ["boxes"][:, (1, 3)] = targ["boxes"][:, (1, 3)] / orig_h
+        boxes_cxcywh = box_xyxy_to_cxcywh(boxes)
+
+        boxes_rescaled = boxes_cxcywh / torch.tensor(
+            [orig_w, orig_h, orig_w, orig_h], dtype=torch.float32
+        )
+
+        # boxes[:, (0, 2)] = targ["boxes"][:, (0, 2)] / orig_w
+        # boxes[:, (1, 3)] = targ["boxes"][:, (1, 3)] / orig_h
+
+        targ["boxes"] = boxes_rescaled
+        # print(targ["boxes"])
 
     return imgs_padded, targets, torch.Tensor(sizes)
 

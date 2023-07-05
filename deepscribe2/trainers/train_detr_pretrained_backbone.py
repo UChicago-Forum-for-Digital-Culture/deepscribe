@@ -1,9 +1,13 @@
-import pytorch_lightning as pl
-import wandb
+from pathlib import Path
 
+import pytorch_lightning as pl
+import torch
+
+import wandb
+from deepscribe2 import transforms as T
 from deepscribe2.datasets import PFADetectionDataModule
 from deepscribe2.models.detection import DETRLightningModule
-from deepscribe2 import transforms as T
+from deepscribe2.utils import load_ckpt_from_wandb
 
 DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
 WANDB_PROJECT = "deepscribe-torchvision"
@@ -36,11 +40,10 @@ model = DETRLightningModule(num_classes=pfa_data_module.num_labels)
 
 # load artifact!!
 
-# download checkpoint locally (if not already cached)
-# run = wandb.init(project=WANDB_PROJECT)
-# artifact = run.use_artifact(f"ecw/{WANDB_PROJECT}/model-vjy1binx:v90", type="model")
-# artifact_dir = artifact.download()
-# model = RetinaNet.load_from_checkpoint(Path(artifact_dir) / "model.ckpt")
+ckpt = load_ckpt_from_wandb("model-01ax80np:v13")
+
+model.init_backbone_from_retinanet_state(ckpt["state_dict"])
+
 
 logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
 
