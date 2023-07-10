@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from typing import Dict, Any
 
 from deepscribe2.models.detection.detr import (
@@ -215,6 +216,14 @@ class DETRLightningModule(pl.LightningModule):
             lr=self.hparams.lr,
             weight_decay=self.hparams.weight_decay,
         )
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, self.hparams.lr_drop)
+        # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, self.hparams.lr_drop)
 
-        return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
+        # TODO: set these params dynamically
+        warmup_scheduler = LinearLR(optimizer, start_factor=0.1, total_iters=10)
+        # cosine_scheduler = CosineAnnealingLR(optimizer, 20)
+
+        # lr_scheduler = SequentialLR(
+        #     optimizer, [warmup_scheduler, cosine_scheduler], milestones=[10]
+        # )
+
+        return {"optimizer": optimizer, "lr_scheduler": warmup_scheduler}
