@@ -19,10 +19,10 @@ From the [ISAC](https://isac.uchicago.edu/research/publications/oip/persepolis-f
 
 ## Download
 
-You can download the publicly availble subset of the Persepolis Fortification Archive from [here](https://ochre.lib.uchicago.edu/deepscribe/deepscribe_2023_02_04_public.tar.gz). It should contain the following files:
+You can download the [publicly availble subset](https://pi.lib.uchicago.edu/1001/org/ochre/a3f05985-9cf4-4a39-a4ab-cf51a7ea2d3d) of the Persepolis Fortification Archive. It contains the following:
 - ImagesWithHotspots.json
     - This is a JSON file containing annotations for each image present in the images/ folder.
-- images
+- images directory
     - Folder containing tablet images.
 - categories.txt.
     - File mapping sign names to the `category_id` values used for labels. 
