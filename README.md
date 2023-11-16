@@ -1,4 +1,4 @@
-# deepscribe
+# DeepScribe
 
 This repository contains the (reimplemented in torchvision) code for the paper "DeepScribe: Localization and Classification of Elamite Cuneiform Signs Via Deep Learning". 
 
