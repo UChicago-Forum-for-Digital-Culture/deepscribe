@@ -14,12 +14,14 @@ ARTIFACTS_DIR = "artifacts"
 # replace this with wherever you put the data. download_data.sh has an example.
 DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
 
-pfa_datamodule = PFADetectionDataModule(DATA_BASE, batch_size=10)
+pfa_datamodule = PFADetectionDataModule(
+    DATA_BASE, batch_size=10, start_from_one=False, localization_only=False
+)
 pfa_datamodule.prepare_data()
 
 pfa_datamodule.setup(stage="test")
 # can also initialize these from trained model objects directly.
-# run download_artifacts.sh f
+# run download_artifacts.sh first.
 pipeline = DeepScribePipeline.from_checkpoints(
     os.path.join(ARTIFACTS_DIR, "detector_epoch=358-step=88673.ckpt"),
     classifier_ckpt=os.path.join(ARTIFACTS_DIR, "classifier_epoch=50-step=2091.ckpt"),
