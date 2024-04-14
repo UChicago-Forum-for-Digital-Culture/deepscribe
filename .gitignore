@@ -9,7 +9,8 @@ wandb/*
 notebooks-testing/*
 deepscribe-torchvision*
 scripts_testing
-
+artifacts/
+data/
 .vscode
 
 artifacts/*

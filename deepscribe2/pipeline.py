@@ -16,34 +16,31 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 class DeepScribePipeline(nn.Module):
     """
     Pipeline combining separately trained localization and classifier.
+
+    NOTE: no longer storing the class label information here. Pull from the
+    dataset.
     """
 
     def __init__(
         self,
         detector: RetinaNet,
-        sign_data: str,
         classifier: ImageClassifier = None,
         score_thresh: float = 0.3,  # apply a score thresh on top of the existing score threshold.
+        device: str = "cuda",
     ) -> None:
         super().__init__()
-
-        self.detector = detector
-        self.classifier = classifier
+        self.detector = detector.to(device)
+        self.classifier = classifier.to(device)
         self.score_thresh = score_thresh
-        # load classes info
-        # pandas will interpret the sign "NA" as NaN
-        sign_data = pd.read_csv(
-            sign_data, na_filter=False, names=["sign", "category_id"]
-        )
-        self.class_labels = sign_data["sign"].tolist()
+        self.device = device
 
     @classmethod
     def from_checkpoints(
         cls,
         detection_ckpt: str,
-        sign_data: str,
         classifier_ckpt: str = None,
         score_thresh: float = 0.3,
+        device: str = "cuda",
     ):
         detector = RetinaNet.load_from_checkpoint(detection_ckpt).eval()
         classifier = (
@@ -53,13 +50,16 @@ class DeepScribePipeline(nn.Module):
         )
 
         return cls(
-            detector, sign_data, classifier=classifier, score_thresh=score_thresh
+            detector,
+            classifier=classifier,
+            score_thresh=score_thresh,
+            device=device,
         )
 
     @torch.no_grad()
     def forward(self, imgs: List[torch.Tensor]):
         # run inference with detector
-        preds = self.detector(imgs)
+        preds = self.detector([img.to(self.device) for img in imgs])
         # hack to get around squarepad not supporting tensors.
         transforms = T.Compose(
             [
@@ -105,7 +105,7 @@ class DeepScribePipeline(nn.Module):
                     cutout = img[:, y1:y2, x1:x2]
                     xformed_cutouts.append(transforms(cutout))
                     # run inference.
-                    cutouts_tensor = torch.stack(xformed_cutouts)
+                    cutouts_tensor = torch.stack(xformed_cutouts).to(self.device)
                     cutout_preds = self.classifier(cutouts_tensor)
                     # overwrite labels with predictions
                     pred["labels"] = cutout_preds.topk(k=1, axis=1).indices.flatten()

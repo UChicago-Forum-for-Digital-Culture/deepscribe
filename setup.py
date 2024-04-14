@@ -16,7 +16,7 @@ setuptools.setup(
         "torch==1.13.1",
         "torchvision==0.14.1",
         "pytorch-lightning==1.9.0",
-        "torchmetrics",
+        "torchmetrics[detection]",
         "numpy",
         "timm",
         "editdistance",
@@ -24,6 +24,7 @@ setuptools.setup(
         "scikit-learn",
         "Pillow",
         "tqdm",
+        "matplotlib",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

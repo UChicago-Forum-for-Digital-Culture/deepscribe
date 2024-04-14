@@ -1,56 +1,49 @@
-from deepscribe2.pipeline import DeepScribePipeline
-from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from deepscribe2.datasets import PFADetectionDataModule
+import os
+
 import editdistance
-from pathlib import Path
-import wandb
 import numpy as np
-from tqdm import tqdm
 import torch
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+from tqdm import tqdm
 
-# download checkpoint locally (if not already cached)
-run = wandb.init(project="deepscribe-e2e")
-artifact = run.use_artifact(
-    f"ecw/deepscribe-torchvision/model-vjy1binx:v90", type="model"
-)
-artifact_dir = artifact.download()
-detection_ckpt = Path(artifact_dir) / "model.ckpt"
+from deepscribe2.datasets import PFADetectionDataModule
+from deepscribe2.pipeline import DeepScribePipeline
 
-artifact = run.use_artifact(
-    f"ecw/deepscribe-torchvision-classifier/model-7mjv8mn7:v19", type="model"
-)
-artifact_dir = artifact.download()
-classification_ckpt = Path(artifact_dir) / "model.ckpt"
-
-DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
+# run download_artifacts.sh to download pretrained models!
+ARTIFACTS_DIR = "artifacts"
+# replace this with wherever you put the data. download_data.sh has an example.
+DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
 
 pfa_datamodule = PFADetectionDataModule(DATA_BASE, batch_size=10)
+pfa_datamodule.prepare_data()
+
 pfa_datamodule.setup(stage="test")
 # can also initialize these from trained model objects directly.
+# run download_artifacts.sh f
 pipeline = DeepScribePipeline.from_checkpoints(
-    detection_ckpt,
-    pfa_datamodule.categories_file,
-    classifier_ckpt=classification_ckpt,
+    os.path.join(ARTIFACTS_DIR, "detector_epoch=358-step=88673.ckpt"),
+    classifier_ckpt=os.path.join(ARTIFACTS_DIR, "classifier_epoch=50-step=2091.ckpt"),
     score_thresh=0.5,
+    device="cuda" if torch.cuda.is_available() else "cpu",
 )
-# use_cuda = torch.cuda.is_available()
-use_cuda = False
-if use_cuda:
-    pipeline.cuda()
 
 map_metric = MeanAveragePrecision()
 edit_dists = []
 
 failed = 0
 
-# i still cannot figure out the scope of torch.no_grad.
 with torch.no_grad():
     for imgs, targets in tqdm(pfa_datamodule.test_dataloader()):
-        if use_cuda:
-            imgs = [img.cuda() for img in imgs]
+
         preds = pipeline(imgs)
-        if use_cuda:
-            preds = {key: tns.cpu() for key, tns in preds.items()}
+
+        preds = [
+            {
+                key: entry.cpu() if isinstance(entry, torch.Tensor) else entry
+                for key, entry in pred.items()
+            }
+            for pred in preds
+        ]
         map_metric.update(preds, targets)
         for pred, targ in zip(preds, targets):
             if "ordering" in pred and pred["ordering"] is not None:

@@ -44,7 +44,7 @@ class SequentialRANSAC(BaseEstimator, ClusterMixin):
             and np.sum(self.labels_ == -1) > 2
         ):
             ransac_line = RANSACRegressor(
-                base_estimator=Ridge(alpha=self.ridge_alpha),
+                estimator=Ridge(alpha=self.ridge_alpha),
                 residual_threshold=self.residual_threshold,
                 is_model_valid=lambda m, _x, _y: np.abs(m.coef_) < self.max_slope,
                 max_trials=self.max_trials,
