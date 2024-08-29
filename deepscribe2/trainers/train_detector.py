@@ -49,16 +49,13 @@ model = RetinaNet(num_classes=pfa_data_module.num_labels)
 
 
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=5
+    monitor=MONITOR_ATTRIBUTE, mode="max", save_top_k=5
 )
 lr_callback = pl.callbacks.LearningRateMonitor(
     logging_interval="epoch", log_momentum=False
 )
-# local_checkpoint = pl.callbacks.ModelCheckpoint(
-#     monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=1, dirpath="/local/ecw/ckpt_test"
-# )
 earlystop_callback = pl.callbacks.EarlyStopping(
-    monitor=MONITOR_ATTRIBUTE, mode="min", patience=20
+    monitor=MONITOR_ATTRIBUTE, mode="max", patience=20
 )
 
 trainer = pl.Trainer(
