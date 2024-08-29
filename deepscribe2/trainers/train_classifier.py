@@ -4,9 +4,11 @@ from torchvision import transforms as T
 from deepscribe2.datasets import PFAClassificationDataModule
 from deepscribe2.models.classification import ImageClassifier
 
-DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
+DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
 MONITOR_ATTRIBUTE = "val_loss"
+USE_WANDB = True  # set to false to skip wandb
+
 
 train_xforms = [
     T.RandomAffine(0, translate=(0.2, 0.2)),
@@ -20,9 +22,14 @@ pfa_datamodule = PFAClassificationDataModule(
 
 model = ImageClassifier(pfa_datamodule.num_labels)
 
-logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
+if USE_WANDB:
+    logger = pl.loggers.WandbLogger(
+        project=WANDB_PROJECT, dir="wandb", save_dir="wandb", log_model="all"
+    )
+else:
+    logger = None
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    monitor=MONITOR_ATTRIBUTE, mode="min"
+    monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=5
 )
 earlystop_callback = pl.callbacks.EarlyStopping(
     monitor=MONITOR_ATTRIBUTE, mode="min", patience=20
