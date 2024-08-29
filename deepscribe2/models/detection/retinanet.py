@@ -13,6 +13,22 @@ from torchvision.models.detection.retinanet import RetinaNetHead, retinanet_resn
 from deepscribe2.models.detection.retinanet_head import RetinaNetHeadCustomizable
 
 
+MAP_TO_SAVE = [
+    "map",
+    "map_50",
+    "map_75",
+    "map_small",
+    "map_medium",
+    "map_large",
+    "mar_1",
+    "mar_10",
+    "mar_100",
+    "mar_small",
+    "mar_medium",
+    "mar_large",
+]
+
+
 # NOTE: ZERO IS BACKGROUND
 # still seems to work fine in the single-class case with n_classes = 1.
 class RetinaNet(LightningModule):
@@ -89,7 +105,12 @@ class RetinaNet(LightningModule):
         self.map.update(preds, targets)
 
     def validation_epoch_end(self, outs):
-        self.log_dict(self.map.compute())
+
+        map_results = self.map.compute()
+
+        self.log_dict(
+            {key: val for key, val in map_results.items() if key in MAP_TO_SAVE}
+        )
         self.map.reset()
 
     def forward(self, x):
