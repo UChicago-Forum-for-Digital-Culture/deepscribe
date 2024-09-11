@@ -32,7 +32,9 @@ pfa_data_module = PFADetectionDataModule(
     start_from_one=True,  # this is required for retinanet to work properly.
 )
 if USE_WANDB:
-    logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
+    logger = pl.loggers.WandbLogger(
+        project=WANDB_PROJECT, dir="wandb", save_dir="wandb", log_model=True
+    )
     # add other hparams
     logger.experiment.config["batch_size"] = BSIZE
     logger.experiment.config["localization_only"] = LOCALIZATION_ONLY
@@ -45,7 +47,9 @@ print(
     f"training with {pfa_data_module.num_labels} labels, including background: {pfa_data_module.hparams.start_from_one}"
 )
 
-model = RetinaNet(num_classes=pfa_data_module.num_labels)
+model = RetinaNet(
+    num_classes=pfa_data_module.num_labels, lr_reduce_patience=10, base_lr=0.005
+)
 
 
 checkpoint_callback = pl.callbacks.ModelCheckpoint(

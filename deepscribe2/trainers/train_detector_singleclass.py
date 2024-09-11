@@ -32,7 +32,9 @@ pfa_data_module = PFADetectionDataModule(
     start_from_one=True,  # this is required for retinanet to work properly.
 )
 if USE_WANDB:
-    logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
+    logger = pl.loggers.WandbLogger(
+        project=WANDB_PROJECT, dir="wandb", save_dir="wandb", log_model="all"
+    )
     # add other hparams
     logger.experiment.config["batch_size"] = BSIZE
     logger.experiment.config["localization_only"] = LOCALIZATION_ONLY

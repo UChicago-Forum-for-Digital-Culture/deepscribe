@@ -52,6 +52,11 @@ class RetinaNet(LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
+        # just realized that mutability might not work if all the data pulls from hparams
+        self.score_thresh = score_thresh
+        self.nms_thresh = nms_thresh
+        self.detections_per_img = detections_per_img
+        self.topk_candidates = topk_candidates
         self.model = self.make_resnet()
         self.map = MeanAveragePrecision()
 
@@ -71,8 +76,10 @@ class RetinaNet(LightningModule):
         model = retinanet_resnet50_fpn(
             trainable_backbone_layers=5,
             weights_backbone=None,
-            # score_thresh=score_thresh,
-            # nms_thresh=nms_thresh,
+            score_thresh=self.score_thresh,
+            nms_thresh=self.nms_thresh,
+            detections_per_img=self.detections_per_img,
+            topk_candidates=self.topk_candidates,
         )
 
         model.head = RetinaNetHeadCustomizable(
