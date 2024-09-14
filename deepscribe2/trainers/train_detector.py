@@ -47,9 +47,7 @@ print(
     f"training with {pfa_data_module.num_labels} labels, including background: {pfa_data_module.hparams.start_from_one}"
 )
 
-model = RetinaNet(
-    num_classes=pfa_data_module.num_labels, lr_reduce_patience=10, base_lr=0.005
-)
+model = RetinaNet(num_classes=pfa_data_module.num_labels, score_thresh=0.2, nms_thresh=0.3)
 
 
 checkpoint_callback = pl.callbacks.ModelCheckpoint(

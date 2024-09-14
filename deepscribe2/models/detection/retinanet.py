@@ -1,14 +1,8 @@
-from typing import Any, Optional
-
 import torch
 from pytorch_lightning import LightningModule
-from torch import nn
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchvision.models.detection.backbone_utils import _resnet_fpn_extractor
-from torchvision.models.detection.retinanet import RetinaNet as torchvision_retinanet
-from torchvision.models.detection.retinanet import _default_anchorgen, resnet50
-from torchvision.ops.feature_pyramid_network import LastLevelP6P7
-from torchvision.models.detection.retinanet import RetinaNetHead, retinanet_resnet50_fpn
+from torchvision.models.detection.retinanet import _default_anchorgen
+from torchvision.models.detection.retinanet import retinanet_resnet50_fpn
 
 from deepscribe2.models.detection.retinanet_head import RetinaNetHeadCustomizable
 
@@ -58,19 +52,9 @@ class RetinaNet(LightningModule):
         self.detections_per_img = detections_per_img
         self.topk_candidates = topk_candidates
         self.model = self.make_resnet()
-        self.map = MeanAveragePrecision()
+        self.map = MeanAveragePrecision(max_detection_thresholds=[10, 50, 400])
 
     def make_resnet(self):
-        # configs the resnet.
-        # backbone_base = resnet50(
-        #     weights=None, progress=False, norm_layer=nn.BatchNorm2d
-        # )
-        # backbone = _resnet_fpn_extractor(
-        #     backbone_base,
-        #     5,
-        #     returned_layers=[2, 3, 4],
-        #     extra_blocks=LastLevelP6P7(256, 256),
-        # )
         anchor_generator = _default_anchorgen()
 
         model = retinanet_resnet50_fpn(
@@ -92,16 +76,6 @@ class RetinaNet(LightningModule):
             reg_loss_type=self.hparams.reg_loss_type,
             reg_loss_beta=self.hparams.reg_loss_beta,
         )
-
-        # model = torchvision_retinanet(
-        #     backbone,
-        #     self.hparams.num_classes,
-        #     nms_thresh=self.hparams.nms_thresh,
-        #     score_thresh=self.hparams.score_thresh,
-        #     head=head,
-        #     topk_candidates=self.hparams.topk_candidates,
-        #     detections_per_img=self.hparams.detections_per_img,
-        # )
 
         return model
 
