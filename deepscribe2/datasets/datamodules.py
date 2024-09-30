@@ -282,8 +282,6 @@ class PFAClassificationDataModule(pl.LightningDataModule):
         )
         self.class_labels = sign_data["sign"].tolist()
         self.num_labels = len(sign_data)
-        if self.hparams.start_from_one:
-            self.num_labels += 1
 
     @property
     def categories_file(self):

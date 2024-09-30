@@ -1,16 +1,26 @@
-from typing import Any, Optional
-
 import torch
 from pytorch_lightning import LightningModule
-from torch import nn
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchvision.models.detection.backbone_utils import _resnet_fpn_extractor
-from torchvision.models.detection.retinanet import RetinaNet as torchvision_retinanet
-from torchvision.models.detection.retinanet import _default_anchorgen, resnet50
-from torchvision.ops.feature_pyramid_network import LastLevelP6P7
-from torchvision.models.detection.retinanet import RetinaNetHead, retinanet_resnet50_fpn
+from torchvision.models.detection.retinanet import _default_anchorgen
+from torchvision.models.detection.retinanet import retinanet_resnet50_fpn
 
 from deepscribe2.models.detection.retinanet_head import RetinaNetHeadCustomizable
+
+
+MAP_TO_SAVE = [
+    "map",
+    "map_50",
+    "map_75",
+    "map_small",
+    "map_medium",
+    "map_large",
+    "mar_1",
+    "mar_10",
+    "mar_100",
+    "mar_small",
+    "mar_medium",
+    "mar_large",
+]
 
 
 # NOTE: ZERO IS BACKGROUND
@@ -36,27 +46,24 @@ class RetinaNet(LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
+        # just realized that mutability might not work if all the data pulls from hparams
+        self.score_thresh = score_thresh
+        self.nms_thresh = nms_thresh
+        self.detections_per_img = detections_per_img
+        self.topk_candidates = topk_candidates
         self.model = self.make_resnet()
-        self.map = MeanAveragePrecision()
+        self.map = MeanAveragePrecision(max_detection_thresholds=[10, 50, 400])
 
     def make_resnet(self):
-        # configs the resnet.
-        # backbone_base = resnet50(
-        #     weights=None, progress=False, norm_layer=nn.BatchNorm2d
-        # )
-        # backbone = _resnet_fpn_extractor(
-        #     backbone_base,
-        #     5,
-        #     returned_layers=[2, 3, 4],
-        #     extra_blocks=LastLevelP6P7(256, 256),
-        # )
         anchor_generator = _default_anchorgen()
 
         model = retinanet_resnet50_fpn(
             trainable_backbone_layers=5,
             weights_backbone=None,
-            # score_thresh=score_thresh,
-            # nms_thresh=nms_thresh,
+            score_thresh=self.score_thresh,
+            nms_thresh=self.nms_thresh,
+            detections_per_img=self.detections_per_img,
+            topk_candidates=self.topk_candidates,
         )
 
         model.head = RetinaNetHeadCustomizable(
@@ -70,16 +77,6 @@ class RetinaNet(LightningModule):
             reg_loss_beta=self.hparams.reg_loss_beta,
         )
 
-        # model = torchvision_retinanet(
-        #     backbone,
-        #     self.hparams.num_classes,
-        #     nms_thresh=self.hparams.nms_thresh,
-        #     score_thresh=self.hparams.score_thresh,
-        #     head=head,
-        #     topk_candidates=self.hparams.topk_candidates,
-        #     detections_per_img=self.hparams.detections_per_img,
-        # )
-
         return model
 
     def validation_step(self, batch, batch_idx):
@@ -89,7 +86,12 @@ class RetinaNet(LightningModule):
         self.map.update(preds, targets)
 
     def validation_epoch_end(self, outs):
-        self.log_dict(self.map.compute())
+
+        map_results = self.map.compute()
+
+        self.log_dict(
+            {key: val for key, val in map_results.items() if key in MAP_TO_SAVE}
+        )
         self.map.reset()
 
     def forward(self, x):

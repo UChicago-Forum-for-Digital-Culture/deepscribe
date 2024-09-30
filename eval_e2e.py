@@ -23,9 +23,9 @@ pfa_datamodule.setup(stage="test")
 # can also initialize these from trained model objects directly.
 # run download_artifacts.sh first.
 pipeline = DeepScribePipeline.from_checkpoints(
-    os.path.join(ARTIFACTS_DIR, "detector_epoch=358-step=88673.ckpt"),
-    classifier_ckpt=os.path.join(ARTIFACTS_DIR, "classifier_epoch=50-step=2091.ckpt"),
-    score_thresh=0.5,
+    os.path.join(ARTIFACTS_DIR, "trained_detector_public.ckpt"),
+    classifier_ckpt=os.path.join(ARTIFACTS_DIR, "trained_classifier_public.ckpt"),
+    score_thresh=0.3,
     device="cuda" if torch.cuda.is_available() else "cpu",
 )
 

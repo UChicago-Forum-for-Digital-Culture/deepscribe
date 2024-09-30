@@ -30,6 +30,14 @@ You can download the [publicly availble subset](https://pi.lib.uchicago.edu/1001
 
 This dataset is released with the license specified in `DATASET_LICENSE.md` in this repo.
 
+## Pretrained Artifacts
+
+You can download pretrained artifacts by running:
+
+    wget https://ochre.lib.uchicago.edu/deepscribe/artifacts.tar.gz && tar -xzvf artifacts.tar.gz
+
+This will contain three checkpoints - a pretrained classifier, and two pretrained detectors, one single and one multi class. 
+
 ## DataModules
 
 This Python package includes two [DataModules](https://pytorch-lightning.readthedocs.io/en/stable/data/datamodule.html) that package and preprocess PFA data for ease of training. The first is the `PFADetectionDataModule` which handles bounding box data, and `PFAClassificationDataModule` which pulls out individual bounding boxes and produces a classification dataset. Some notes about each dataset are found below.

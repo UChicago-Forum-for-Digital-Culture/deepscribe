@@ -98,7 +98,6 @@ class DeepScribePipeline(nn.Module):
                 continue
 
             if self.classifier:
-                # print("Running inference with classifier...")
                 xformed_cutouts = []
                 for i in range(num_preds):
                     x1, y1, x2, y2 = pred["boxes"][i, :].long().tolist()

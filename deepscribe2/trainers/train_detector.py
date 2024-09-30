@@ -1,15 +1,16 @@
-from pathlib import Path
-
 import pytorch_lightning as pl
 
-import wandb
 from deepscribe2 import transforms as T
 from deepscribe2.datasets import PFADetectionDataModule
-from deepscribe2.models import RetinaNet
+from deepscribe2.models.detection.retinanet import RetinaNet
 
-DATA_BASE = "/local/ecw/DeepScribe_Data_2023-02-04-selected"
+DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+MONITOR_ATTRIBUTE = "map_50"
+BSIZE = 3
 WANDB_PROJECT = "deepscribe-torchvision"
-MONITOR_ATTRIBUTE = "loss"
+USE_WANDB = True  # set to false to skip wandb
+
+
 LOCALIZATION_ONLY = False
 
 xforms = T.Compose(
@@ -18,38 +19,52 @@ xforms = T.Compose(
         T.RandomShortestSize(
             [500, 640, 672, 704, 736, 768, 800], 1333
         ),  # taken directly from detectron2 config.
-        # T.RandomIoUCrop(),
-        # T.RandomZoomOut(),
-        # T.RandomPhotometricDistort(),
     ]
 )
+
 
 pfa_data_module = PFADetectionDataModule(
     DATA_BASE,
     autocrop=True,
-    batch_size=3,
+    batch_size=BSIZE,
     train_xforms=xforms,
     localization_only=LOCALIZATION_ONLY,
+    start_from_one=True,  # this is required for retinanet to work properly.
+)
+if USE_WANDB:
+    logger = pl.loggers.WandbLogger(
+        project=WANDB_PROJECT, dir="wandb", save_dir="wandb", log_model=True
+    )
+    # add other hparams
+    logger.experiment.config["batch_size"] = BSIZE
+    logger.experiment.config["localization_only"] = LOCALIZATION_ONLY
+    logger.experiment.config["start_from_one"] = True
+    logger.experiment.config["datamodule_labels"] = pfa_data_module.num_labels
+else:
+    logger = None
+
+print(
+    f"training with {pfa_data_module.num_labels} labels, including background: {pfa_data_module.hparams.start_from_one}"
 )
 
-model = RetinaNet(num_classes=pfa_data_module.num_labels, learning_rate=1e-3)
+model = RetinaNet(num_classes=pfa_data_module.num_labels, score_thresh=0.2, nms_thresh=0.3)
 
-logger = pl.loggers.WandbLogger(project=WANDB_PROJECT, log_model="all")
+
 checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=5
+    monitor=MONITOR_ATTRIBUTE, mode="max", save_top_k=5
 )
-# local_checkpoint = pl.callbacks.ModelCheckpoint(
-#     monitor=MONITOR_ATTRIBUTE, mode="min", save_top_k=1, dirpath="/local/ecw/ckpt_test"
-# )
-# earlystop_callback = pl.callbacks.EarlyStopping(
-#     monitor=MONITOR_ATTRIBUTE, mode="min", patience=20
-# )
+lr_callback = pl.callbacks.LearningRateMonitor(
+    logging_interval="epoch", log_momentum=False
+)
+earlystop_callback = pl.callbacks.EarlyStopping(
+    monitor=MONITOR_ATTRIBUTE, mode="max", patience=20
+)
 
 trainer = pl.Trainer(
     accelerator="gpu",
     devices=1,
     logger=logger,
     max_epochs=1000,
-    callbacks=[checkpoint_callback],
+    callbacks=[checkpoint_callback, lr_callback, earlystop_callback],
 )
 trainer.fit(model, datamodule=pfa_data_module)
