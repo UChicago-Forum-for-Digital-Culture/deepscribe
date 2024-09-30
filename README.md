@@ -6,7 +6,7 @@ This repository contains the (reimplemented in torchvision) code for the paper "
 
 # Installation
 
-Install conda environment using `environment.yml`, and install the `deepscribe2` module with `pip install -e .` from within this directory. 
+Install the `deepscribe2` module and all requirements with `pip install -e .` from within this directory. 
 
 # Dataset
 
