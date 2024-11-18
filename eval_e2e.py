@@ -9,23 +9,24 @@ from tqdm import tqdm
 from deepscribe2.datasets import PFADetectionDataModule
 from deepscribe2.pipeline import DeepScribePipeline
 
-# run download_artifacts.sh to download pretrained models!
+# download pretrained models!
 ARTIFACTS_DIR = "artifacts"
 # replace this with wherever you put the data. download_data.sh has an example.
 DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
 
 pfa_datamodule = PFADetectionDataModule(
-    DATA_BASE, batch_size=10, start_from_one=False, localization_only=False
+    DATA_BASE, batch_size=10, start_from_one=True, localization_only=False
 )
 pfa_datamodule.prepare_data()
 
 pfa_datamodule.setup(stage="test")
-# can also initialize these from trained model objects directly.
+# can also initialize these from model objects directly.
 # run download_artifacts.sh first.
 pipeline = DeepScribePipeline.from_checkpoints(
-    os.path.join(ARTIFACTS_DIR, "trained_detector_public.ckpt"),
-    classifier_ckpt=os.path.join(ARTIFACTS_DIR, "trained_classifier_public.ckpt"),
-    score_thresh=0.3,
+    os.path.join(ARTIFACTS_DIR, "trained_detector_public_multiclass.ckpt"),
+    # os.path.join(ARTIFACTS_DIR, "trained_detector_public.ckpt"),
+    # classifier_ckpt=os.path.join(ARTIFACTS_DIR, "trained_classifier_public.ckpt"),
+    score_thresh=0.5,
     device="cuda" if torch.cuda.is_available() else "cpu",
 )
 

@@ -10,7 +10,7 @@ notebooks-testing/*
 deepscribe-torchvision*
 scripts_testing
 artifacts/
-artifacts.tar.gz
+artifacts.tar.gz*
 data/
 .vscode
 

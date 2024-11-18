@@ -25,6 +25,7 @@ setuptools.setup(
         "Pillow",
         "tqdm",
         "matplotlib",
+        networkx,
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
