@@ -4,7 +4,8 @@ from deepscribe2 import transforms as T
 from deepscribe2.datasets import PFADetectionDataModule
 from deepscribe2.models.detection.retinanet import RetinaNet
 
-DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+# DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+DATA_BASE = "/local/ecw/deepscribe_data_nov_2023"
 MONITOR_ATTRIBUTE = "map_50"
 BSIZE = 5
 WANDB_PROJECT = "deepscribe-torchvision"
