@@ -4,7 +4,8 @@ from deepscribe2 import transforms as T
 from deepscribe2.datasets import PFADetectionDataModule
 from deepscribe2.models.detection.retinanet import RetinaNet
 
-DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+# DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+DATA_BASE = "/local/ecw/deepscribe_data_nov_2023"
 MONITOR_ATTRIBUTE = "map_50"
 BSIZE = 3
 WANDB_PROJECT = "deepscribe-torchvision"
@@ -47,7 +48,9 @@ print(
     f"training with {pfa_data_module.num_labels} labels, including background: {pfa_data_module.hparams.start_from_one}"
 )
 
-model = RetinaNet(num_classes=pfa_data_module.num_labels, score_thresh=0.2, nms_thresh=0.3)
+model = RetinaNet(
+    num_classes=pfa_data_module.num_labels, score_thresh=0.2, nms_thresh=0.3
+)
 
 
 checkpoint_callback = pl.callbacks.ModelCheckpoint(

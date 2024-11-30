@@ -24,16 +24,47 @@ def compute_cls_metrics(labels, preds, iou_thresh=0.5):
 
     matched_true_cls = true_cls[best_match]
 
-    top1_acc = (matched_true_cls == pred_cls)[~false_positive].float().mean()
+    top1_truepositive = (matched_true_cls == pred_cls)[~false_positive].float()
 
-    metrics = {"fpr": false_positive.float().mean(), "top1_acc": top1_acc}
+    metrics = {
+        "fpr": float(false_positive.float().mean()),
+        "fp_count": float(false_positive.sum()),
+        "count": false_positive.shape[0],
+        "top1_acc": float(top1_truepositive.mean()),
+        "top1_truepositive": float(top1_truepositive.sum()),
+    }
 
     if "classifier_top5" in preds:
         has_match = (
             torch.eq(matched_true_cls.unsqueeze(1), preds["classifier_top5"])
             .float()
             .sum(1)
-        )
-        metrics["top5_acc"] = has_match[~false_positive].mean()
+            > 0
+        ).float()
+        metrics["top5_acc"] = float(has_match[~false_positive].mean())
+        metrics["top5_truepositive"] = float(has_match[~false_positive].sum())
 
     return metrics
+
+
+def compute_cls_metrics_agged(labels_all, preds_all, iou_thresh=0.5):
+
+    count = 0
+    false_positives = 0
+    top1_tp = 0
+    top5_tp = 0
+
+    for labels, preds in zip(labels_all, preds_all):
+        metrics = compute_cls_metrics(labels, preds, iou_thresh=iou_thresh)
+        count += metrics["count"]
+        false_positives += metrics["fp_count"]
+        top1_tp += metrics["top1_truepositive"]
+        top5_tp += metrics["top5_truepositive"]
+
+    results = {
+        "fpr": false_positives / count,
+        "top1_acc": top1_tp / count,
+        "top5_acc": top5_tp / count,
+    }
+
+    return results

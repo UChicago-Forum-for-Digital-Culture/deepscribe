@@ -4,7 +4,8 @@ from torchvision import transforms as T
 from deepscribe2.datasets import PFAClassificationDataModule
 from deepscribe2.models.classification import ImageClassifier
 
-DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+# DATA_BASE = "data/DeepScribe_Data_2023-02-04_public"
+DATA_BASE = "/local/ecw/deepscribe_data_nov_2023"
 WANDB_PROJECT = "deepscribe-torchvision-classifier"
 MONITOR_ATTRIBUTE = "val_loss"
 USE_WANDB = True  # set to false to skip wandb
